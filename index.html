@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>고래추적기 — 기관 지분 변동 추적</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Pretendard:wght@300;400;500;600;700&display=swap');
+
+  :root {
+    --bg: #0a0c0f;
+    --surface: #111318;
+    --surface2: #181c23;
+    --border: #1e2330;
+    --border2: #252d3d;
+    --accent: #3b82f6;
+    --accent2: #1d4ed8;
+    --green: #10b981;
+    --red: #ef4444;
+    --yellow: #f59e0b;
+    --text: #e2e8f0;
+    --text2: #94a3b8;
+    --text3: #475569;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'Pretendard', -apple-system, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+    position: sticky;
+    top: 0;
+    background: rgba(10,12,15,0.95);
+    backdrop-filter: blur(8px);
+    z-index: 100;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    font-size: 16px;
+    letter-spacing: -0.3px;
+  }
+
+  .logo-icon {
+    width: 28px; height: 28px;
+    background: linear-gradient(135deg, var(--accent), #6366f1);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .update-badge {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 3px 8px;
+    border-radius: 4px;
+  }
+
+  .update-badge span {
+    color: var(--green);
+    margin-right: 4px;
+  }
+
+  /* ── Nav Tabs ── */
+  .nav-tabs {
+    display: flex;
+    gap: 2px;
+    padding: 16px 24px 0;
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .nav-tabs::-webkit-scrollbar { display: none; }
+
+  .tab-btn {
+    background: none;
+    border: none;
+    color: var(--text3);
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 500;
+    padding: 8px 16px 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .tab-btn:hover { color: var(--text2); }
+
+  .tab-btn.active {
+    color: var(--text);
+    border-bottom-color: var(--accent);
+  }
+
+  .tab-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--text3);
+  }
+  .tab-btn.active .tab-dot { background: var(--accent); }
+
+  /* ── Layout ── */
+  .container {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 24px;
+  }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ── Section Header ── */
+  .section-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .section-title {
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+  }
+
+  .section-sub {
+    font-size: 12px;
+    color: var(--text3);
+    margin-top: 3px;
+    font-family: var(--mono);
+  }
+
+  /* ── AI 분석 버튼 ── */
+  .ai-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(135deg, #1e3a5f, #1e2d5a);
+    border: 1px solid #2d4a7a;
+    color: #7dd3fc;
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 500;
+    padding: 7px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .ai-btn:hover {
+    background: linear-gradient(135deg, #1e3a6f, #1e2d6a);
+    border-color: #3b6aaa;
+  }
+
+  .ai-btn svg { flex-shrink: 0; }
+
+  /* ── AI 분석 패널 ── */
+  .ai-panel {
+    background: linear-gradient(135deg, rgba(15,25,50,0.8), rgba(10,20,40,0.8));
+    border: 1px solid #1e3a5f;
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    display: none;
+    animation: fadeIn 0.3s ease;
+  }
+
+  .ai-panel.visible { display: block; }
+
+  .ai-panel-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #7dd3fc;
+    letter-spacing: 0.5px;
+  }
+
+  .ai-panel-content {
+    font-size: 13px;
+    color: var(--text2);
+    line-height: 1.75;
+    white-space: pre-wrap;
+  }
+
+  .ai-loading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text3);
+    font-size: 13px;
+  }
+
+  .ai-spinner {
+    width: 14px; height: 14px;
+    border: 2px solid var(--border2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+
+  /* ── Stats Row ── */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+
+  .stat-label {
+    font-size: 11px;
+    color: var(--text3);
+    font-family: var(--mono);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+  }
+
+  .stat-value {
+    font-size: 22px;
+    font-weight: 700;
+    font-family: var(--mono);
+    letter-spacing: -0.5px;
+  }
+
+  .stat-value.up { color: var(--green); }
+  .stat-value.down { color: var(--red); }
+  .stat-value.neutral { color: var(--text); }
+
+  .stat-sub {
+    font-size: 11px;
+    color: var(--text3);
+    margin-top: 3px;
+  }
+
+  /* ── Filter Bar ── */
+  .filter-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+
+  .filter-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    font-family: var(--sans);
+    font-size: 12px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .filter-btn:hover { border-color: var(--border2); color: var(--text); }
+  .filter-btn.active { background: var(--accent2); border-color: var(--accent); color: #fff; }
+
+  .search-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 13px;
+    padding: 5px 12px;
+    border-radius: 6px;
+    outline: none;
+    transition: border 0.15s;
+    flex: 1;
+    max-width: 260px;
+  }
+
+  .search-box::placeholder { color: var(--text3); }
+  .search-box:focus { border-color: var(--accent); }
+
+  /* ── Table ── */
+  .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  thead {
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+
+  th {
+    text-align: left;
+    padding: 10px 14px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text3);
+    font-family: var(--mono);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+
+  td {
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    vertical-align: middle;
+  }
+
+  tr:last-child td { border-bottom: none; }
+
+  tr:hover td { background: rgba(255,255,255,0.02); }
+
+  .ticker {
+    font-family: var(--mono);
+    font-weight: 600;
+    font-size: 12px;
+    color: var(--accent);
+    background: rgba(59,130,246,0.1);
+    padding: 2px 7px;
+    border-radius: 4px;
+    display: inline-block;
+  }
+
+  .change-badge {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+  }
+
+  .change-badge.up { background: rgba(16,185,129,0.12); color: var(--green); }
+  .change-badge.down { background: rgba(239,68,68,0.12); color: var(--red); }
+  .change-badge.new { background: rgba(245,158,11,0.12); color: var(--yellow); }
+
+  .pct-bar-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .pct-bar {
+    height: 4px;
+    background: var(--border2);
+    border-radius: 2px;
+    width: 80px;
+    flex-shrink: 0;
+  }
+
+  .pct-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: var(--accent);
+  }
+
+  .pct-text {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text2);
+  }
+
+  .entity-name {
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .entity-sub {
+    font-size: 11px;
+    color: var(--text3);
+    margin-top: 1px;
+  }
+
+  .date-text {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+  }
+
+  /* ── 고래 카드 그리드 ── */
+  .whale-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+
+  .whale-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px;
+    transition: border-color 0.2s;
+  }
+
+  .whale-card:hover { border-color: var(--border2); }
+
+  .whale-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+
+  .whale-name {
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .whale-aum {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+
+  .whale-holdings {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .holding-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .holding-ticker {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--accent);
+    width: 60px;
+    flex-shrink: 0;
+  }
+
+  .holding-bar-wrap { flex: 1; }
+  .holding-bar { height: 3px; background: var(--border2); border-radius: 2px; }
+  .holding-bar-fill { height: 100%; border-radius: 2px; background: linear-gradient(90deg, var(--accent), #6366f1); }
+
+  .holding-pct {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    width: 40px;
+    text-align: right;
+  }
+
+  .holding-chg {
+    font-family: var(--mono);
+    font-size: 11px;
+    width: 50px;
+    text-align: right;
+  }
+
+  /* ── 빈 상태 ── */
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text3);
+  }
+
+  .empty-state-icon { font-size: 36px; margin-bottom: 12px; opacity: 0.4; }
+  .empty-state-text { font-size: 14px; }
+
+  /* ── 로딩 스켈레톤 ── */
+  .skeleton {
+    background: linear-gradient(90deg, var(--surface) 25%, var(--surface2) 50%, var(--surface) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 4px;
+    height: 14px;
+  }
+
+  @keyframes shimmer { to { background-position: -200% 0; } }
+
+  /* ── 반응형 ── */
+  @media (max-width: 768px) {
+    .container { padding: 16px; }
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    .nav-tabs { padding: 12px 16px 0; }
+    th, td { padding: 9px 10px; }
+    .whale-grid { grid-template-columns: 1fr; }
+    header { padding: 0 16px; }
+  }
+
+  /* ── 푸터 ── */
+  footer {
+    margin-top: 60px;
+    padding: 24px;
+    border-top: 1px solid var(--border);
+    text-align: center;
+    font-size: 12px;
+    color: var(--text3);
+    font-family: var(--mono);
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">🐋</div>
+    고래추적기
+  </div>
+  <div class="header-right">
+    <div class="update-badge"><span>●</span>DART · SEC 연동</div>
+  </div>
+</header>
+
+<!-- Nav Tabs -->
+<div class="nav-tabs">
+  <button class="tab-btn active" onclick="switchTab('dart')">
+    <div class="tab-dot"></div> DART 지분변동
+  </button>
+  <button class="tab-btn" onclick="switchTab('nps')">
+    <div class="tab-dot"></div> 국민연금
+  </button>
+  <button class="tab-btn" onclick="switchTab('legends')">
+    <div class="tab-dot"></div> 투자 전설
+  </button>
+  <button class="tab-btn" onclick="switchTab('whale')">
+    <div class="tab-dot"></div> 종목별 고래 추적
+  </button>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     TAB 1: DART 지분변동
+═══════════════════════════════════════════ -->
+<div class="container">
+
+<div id="tab-dart" class="tab-panel active">
+  <div class="section-header">
+    <div>
+      <div class="section-title">DART 대량 지분 변동</div>
+      <div class="section-sub">금융감독원 공시 기반 · 5%·10% 이상 지분 보고</div>
+    </div>
+    <button class="ai-btn" onclick="analyzeWithAI('dart')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+      AI 요약 분석
+    </button>
+  </div>
+
+  <div class="ai-panel" id="ai-dart">
+    <div class="ai-panel-header">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+      AI 분석 결과 (Claude)
+    </div>
+    <div class="ai-panel-content" id="ai-dart-content">
+      <div class="ai-loading"><div class="ai-spinner"></div> 분석 중...</div>
+    </div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-label">오늘 신규 공시</div>
+      <div class="stat-value neutral" id="stat-total">—</div>
+      <div class="stat-sub">건</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">신규 매수</div>
+      <div class="stat-value up" id="stat-buy">—</div>
+      <div class="stat-sub">건</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">신규 매도</div>
+      <div class="stat-value down" id="stat-sell">—</div>
+      <div class="stat-sub">건</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">신규 진입</div>
+      <div class="stat-value neutral" id="stat-new">—</div>
+      <div class="stat-sub">건</div>
+    </div>
+  </div>
+
+  <div class="filter-bar">
+    <button class="filter-btn active" onclick="filterDart('all', this)">전체</button>
+    <button class="filter-btn" onclick="filterDart('buy', this)">매수↑</button>
+    <button class="filter-btn" onclick="filterDart('sell', this)">매도↓</button>
+    <button class="filter-btn" onclick="filterDart('new', this)">신규진입</button>
+    <input class="search-box" placeholder="종목명 검색..." oninput="searchDart(this.value)" />
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>종목</th>
+          <th>보고자</th>
+          <th>변동 유형</th>
+          <th>보유 비율</th>
+          <th>변동 주식수</th>
+          <th>공시일</th>
+        </tr>
+      </thead>
+      <tbody id="dart-tbody">
+        <tr><td colspan="6"><div class="empty-state"><div class="empty-state-icon">📋</div><div class="empty-state-text">데이터 로딩 중... DART API 연결 설정 필요</div></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     TAB 2: 국민연금
+═══════════════════════════════════════════ -->
+<div id="tab-nps" class="tab-panel">
+  <div class="section-header">
+    <div>
+      <div class="section-title">국민연금 포트폴리오</div>
+      <div class="section-sub">DART 사업보고서 + SEC 13F 기반</div>
+    </div>
+    <button class="ai-btn" onclick="analyzeWithAI('nps')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+      AI 요약 분석
+    </button>
+  </div>
+
+  <div class="ai-panel" id="ai-nps">
+    <div class="ai-panel-header">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+      AI 분석 결과 (Claude)
+    </div>
+    <div class="ai-panel-content" id="ai-nps-content">
+      <div class="ai-loading"><div class="ai-spinner"></div> 분석 중...</div>
+    </div>
+  </div>
+
+  <!-- 국내/미국 서브탭 -->
+  <div class="filter-bar" style="margin-bottom:20px">
+    <button class="filter-btn active" onclick="switchNps('kr', this)">🇰🇷 국내 주식</button>
+    <button class="filter-btn" onclick="switchNps('us', this)">🇺🇸 미국 주식</button>
+  </div>
+
+  <div id="nps-kr">
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">총 운용 자산</div>
+        <div class="stat-value neutral">1,038조</div>
+        <div class="stat-sub">원 (2024 기준)</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">국내 주식 비중</div>
+        <div class="stat-value neutral">14.9%</div>
+        <div class="stat-sub">전체 포트폴리오</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">해외 주식 비중</div>
+        <div class="stat-value up">35.1%</div>
+        <div class="stat-sub">전체 포트폴리오</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">기준일</div>
+        <div class="stat-value neutral" style="font-size:14px">2024 Q4</div>
+        <div class="stat-sub">사업보고서</div>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>순위</th><th>종목</th><th>지분율</th><th>보유주식</th><th>평가금액</th><th>전분기 대비</th>
+          </tr>
+        </thead>
+        <tbody id="nps-kr-tbody">
+          <!-- JS로 채움 -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="nps-us" style="display:none">
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">해외 주식 AUM</div>
+        <div class="stat-value neutral">$246B</div>
+        <div class="stat-sub">USD 추정</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">보유 종목 수</div>
+        <div class="stat-value neutral">1,200+</div>
+        <div class="stat-sub">13F 기준</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">분기 기준</div>
+        <div class="stat-value neutral" style="font-size:14px">2024 Q4</div>
+        <div class="stat-sub">SEC 13F</div>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>순위</th><th>Ticker</th><th>종목명</th><th>보유주식</th><th>평가금액(USD)</th><th>전분기 대비</th>
+          </tr>
+        </thead>
+        <tbody id="nps-us-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     TAB 3: 투자 전설
+═══════════════════════════════════════════ -->
+<div id="tab-legends" class="tab-panel">
+  <div class="section-header">
+    <div>
+      <div class="section-title">투자 전설 포트폴리오</div>
+      <div class="section-sub">SEC 13F 분기 보고서 기반 · 분기별 자동 업데이트</div>
+    </div>
+    <button class="ai-btn" onclick="analyzeWithAI('legends')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+      AI 요약 분석
+    </button>
+  </div>
+
+  <div class="ai-panel" id="ai-legends">
+    <div class="ai-panel-header">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+      AI 분석 결과 (Claude)
+    </div>
+    <div class="ai-panel-content" id="ai-legends-content">
+      <div class="ai-loading"><div class="ai-spinner"></div> 분석 중...</div>
+    </div>
+  </div>
+
+  <div class="whale-grid" id="legends-grid">
+    <!-- JS로 채움 -->
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     TAB 4: 종목별 고래 추적
+═══════════════════════════════════════════ -->
+<div id="tab-whale" class="tab-panel">
+  <div class="section-header">
+    <div>
+      <div class="section-title">종목별 고래 추적</div>
+      <div class="section-sub">특정 종목을 보유한 기관·투자 전설 한눈에 보기</div>
+    </div>
+    <button class="ai-btn" onclick="analyzeWithAI('whale')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+      AI 요약 분석
+    </button>
+  </div>
+
+  <div class="ai-panel" id="ai-whale">
+    <div class="ai-panel-header">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+      AI 분석 결과 (Claude)
+    </div>
+    <div class="ai-panel-content" id="ai-whale-content">
+      <div class="ai-loading"><div class="ai-spinner"></div> 분석 중...</div>
+    </div>
+  </div>
+
+  <!-- 종목 검색 -->
+  <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap">
+    <input class="search-box" style="max-width:320px; font-size:14px; padding:10px 14px"
+      placeholder="종목명 또는 티커 입력 (예: 삼성전자, AAPL)"
+      id="whale-search-input"
+      oninput="whaleSearch(this.value)" />
+    <div class="filter-bar" style="margin:0">
+      <button class="filter-btn active" onclick="filterWhaleMarket('all', this)">전체</button>
+      <button class="filter-btn" onclick="filterWhaleMarket('kr', this)">국내</button>
+      <button class="filter-btn" onclick="filterWhaleMarket('us', this)">미국</button>
+    </div>
+  </div>
+
+  <!-- 인기 종목 칩 -->
+  <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:20px">
+    <span style="font-size:11px; color:var(--text3); font-family:var(--mono); line-height:28px">빠른 선택:</span>
+    <button class="filter-btn" onclick="quickWhale('삼성전자')">삼성전자</button>
+    <button class="filter-btn" onclick="quickWhale('SK하이닉스')">SK하이닉스</button>
+    <button class="filter-btn" onclick="quickWhale('현대차')">현대차</button>
+    <button class="filter-btn" onclick="quickWhale('AAPL')">AAPL</button>
+    <button class="filter-btn" onclick="quickWhale('NVDA')">NVDA</button>
+    <button class="filter-btn" onclick="quickWhale('TSLA')">TSLA</button>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>투자자</th><th>유형</th><th>보유 비율</th><th>보유 주식</th><th>전분기 대비</th><th>최근 변동</th>
+        </tr>
+      </thead>
+      <tbody id="whale-tbody">
+        <tr><td colspan="6"><div class="empty-state"><div class="empty-state-icon">🔍</div><div class="empty-state-text">종목을 입력하거나 위 버튼을 눌러 고래를 추적하세요</div></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+</div><!-- /container -->
+
+<footer>
+  🐋 고래추적기 · DART API + SEC EDGAR 기반 · GitHub Actions 자동 업데이트<br>
+  <span style="opacity:0.5">투자 참고용 정보입니다. 투자 판단의 책임은 본인에게 있습니다.</span>
+</footer>
+
+<script>
+// ═══════════════════════════════════════════
+// 샘플 데이터 (실제 운영 시 data/*.json에서 fetch)
+// ═══════════════════════════════════════════
+
+const DART_DATA = [
+  { ticker:'005930', name:'삼성전자', reporter:'국민연금공단', type:'buy', prev:8.23, curr:8.41, change:+0.18, shares:'+1,240,000', date:'2025-01-15' },
+  { ticker:'000660', name:'SK하이닉스', reporter:'블랙록', type:'buy', prev:4.11, curr:5.02, change:+0.91, shares:'+2,340,000', date:'2025-01-14' },
+  { ticker:'035420', name:'NAVER', reporter:'국민연금공단', type:'sell', prev:10.24, curr:9.98, change:-0.26, shares:'-520,000', date:'2025-01-13' },
+  { ticker:'051910', name:'LG화학', reporter:'싱가포르투자청', type:'new', prev:0, curr:5.12, change:+5.12, shares:'+1,890,000', date:'2025-01-12' },
+  { ticker:'005380', name:'현대차', reporter:'뱅가드그룹', type:'buy', prev:6.33, curr:6.89, change:+0.56, shares:'+890,000', date:'2025-01-11' },
+  { ticker:'207940', name:'삼성바이오로직스', reporter:'캐피탈그룹', type:'sell', prev:7.45, curr:6.92, change:-0.53, shares:'-340,000', date:'2025-01-10' },
+  { ticker:'006400', name:'삼성SDI', reporter:'노르웨이국부펀드', type:'buy', prev:5.01, curr:5.78, change:+0.77, shares:'+1,120,000', date:'2025-01-09' },
+];
+
+const NPS_KR_DATA = [
+  { rank:1, ticker:'005930', name:'삼성전자', pct:8.41, shares:'4,789만주', value:'284,500억', chg:'+0.18%', chgType:'up' },
+  { rank:2, ticker:'000660', name:'SK하이닉스', pct:6.72, shares:'488만주', value:'89,200억', chg:'-0.12%', chgType:'down' },
+  { rank:3, ticker:'005380', name:'현대차', pct:8.23, shares:'390만주', value:'68,900억', chg:'+0.56%', chgType:'up' },
+  { rank:4, ticker:'035420', name:'NAVER', pct:9.98, shares:'163만주', value:'34,100억', chg:'-0.26%', chgType:'down' },
+  { rank:5, ticker:'051910', name:'LG화학', pct:10.34, shares:'187만주', value:'43,200억', chg:'+0.34%', chgType:'up' },
+  { rank:6, ticker:'207940', name:'삼성바이오로직스', pct:6.92, shares:'44만주', value:'28,700억', chg:'-0.53%', chgType:'down' },
+  { rank:7, ticker:'006400', name:'삼성SDI', pct:5.78, shares:'79만주', value:'18,900억', chg:'+0.77%', chgType:'up' },
+];
+
+const NPS_US_DATA = [
+  { rank:1, ticker:'AAPL', name:'Apple Inc.', shares:'32,400,000', value:'$6.2B', chg:'+2.3%', chgType:'up' },
+  { rank:2, ticker:'MSFT', name:'Microsoft Corp.', shares:'18,200,000', value:'$7.1B', chg:'+1.1%', chgType:'up' },
+  { rank:3, ticker:'NVDA', name:'NVIDIA Corp.', shares:'24,100,000', value:'$12.4B', chg:'+8.9%', chgType:'up' },
+  { rank:4, ticker:'AMZN', name:'Amazon.com Inc.', shares:'15,800,000', value:'$3.4B', chg:'-0.8%', chgType:'down' },
+  { rank:5, ticker:'GOOGL', name:'Alphabet Inc.', shares:'11,200,000', value:'$2.1B', chg:'+0.5%', chgType:'up' },
+  { rank:6, ticker:'META', name:'Meta Platforms', shares:'9,700,000', value:'$5.8B', chg:'+3.2%', chgType:'up' },
+  { rank:7, ticker:'TSLA', name:'Tesla Inc.', shares:'8,900,000', value:'$2.3B', chg:'-2.1%', chgType:'down' },
+];
+
+const LEGENDS_DATA = [
+  {
+    name: '워런 버핏', firm:'Berkshire Hathaway', emoji:'🎩',
+    aum: '$347B',
+    holdings: [
+      { ticker:'AAPL', pct:45.2, chg:'+0%', type:'hold' },
+      { ticker:'BAC', pct:10.1, chg:'-1.2%', type:'sell' },
+      { ticker:'AXP', pct:8.4, chg:'+0%', type:'hold' },
+      { ticker:'KO', pct:6.8, chg:'+0%', type:'hold' },
+      { ticker:'CVX', pct:6.2, chg:'-0.8%', type:'sell' },
+    ]
+  },
+  {
+    name: '마이클 버리', firm:'Scion Asset Mgmt', emoji:'🐻',
+    aum: '$1.8B',
+    holdings: [
+      { ticker:'BIDU', pct:22.1, chg:'+5.4%', type:'buy' },
+      { ticker:'JD', pct:18.3, chg:'+3.1%', type:'buy' },
+      { ticker:'GEO', pct:12.4, chg:'+2.8%', type:'buy' },
+      { ticker:'CPRI', pct:9.7, chg:'+0%', type:'hold' },
+      { ticker:'RCM', pct:7.2, chg:'-4.1%', type:'sell' },
+    ]
+  },
+  {
+    name: '레이 달리오', firm:'Bridgewater Associates', emoji:'🌊',
+    aum: '$124B',
+    holdings: [
+      { ticker:'SPY', pct:14.2, chg:'+0.8%', type:'buy' },
+      { ticker:'GLD', pct:12.8, chg:'+1.2%', type:'buy' },
+      { ticker:'EEM', pct:8.9, chg:'-0.4%', type:'sell' },
+      { ticker:'VWO', pct:7.1, chg:'+0%', type:'hold' },
+      { ticker:'IVV', pct:6.4, chg:'+0.6%', type:'buy' },
+    ]
+  },
+  {
+    name: '빌 애크먼', firm:'Pershing Square', emoji:'📐',
+    aum: '$16.2B',
+    holdings: [
+      { ticker:'HLT', pct:19.3, chg:'+2.1%', type:'buy' },
+      { ticker:'QSR', pct:16.8, chg:'+0%', type:'hold' },
+      { ticker:'CP', pct:15.2, chg:'+0%', type:'hold' },
+      { ticker:'GOOGL', pct:14.1, chg:'+3.4%', type:'buy' },
+      { ticker:'CMG', pct:12.7, chg:'-1.2%', type:'sell' },
+    ]
+  },
+  {
+    name: '데이비드 테퍼', firm:'Appaloosa Mgmt', emoji:'🐎',
+    aum: '$14.8B',
+    holdings: [
+      { ticker:'META', pct:11.2, chg:'+4.8%', type:'buy' },
+      { ticker:'AMZN', pct:9.7, chg:'+2.3%', type:'buy' },
+      { ticker:'NVDA', pct:8.9, chg:'+5.1%', type:'buy' },
+      { ticker:'BABA', pct:8.4, chg:'+3.2%', type:'buy' },
+      { ticker:'MSFT', pct:7.1, chg:'+0%', type:'hold' },
+    ]
+  },
+  {
+    name: '조지 소로스', firm:'Soros Fund Mgmt', emoji:'🔮',
+    aum: '$8.9B',
+    holdings: [
+      { ticker:'NVS', pct:8.3, chg:'+2.1%', type:'buy' },
+      { ticker:'PLTR', pct:7.9, chg:'+12.4%', type:'buy' },
+      { ticker:'RIG', pct:6.2, chg:'-1.8%', type:'sell' },
+      { ticker:'IBIT', pct:5.8, chg:'+8.9%', type:'buy' },
+      { ticker:'RIVN', pct:4.1, chg:'-2.3%', type:'sell' },
+    ]
+  },
+];
+
+const WHALE_STOCK_DATA = {
+  '삼성전자': [
+    { investor:'국민연금공단', type:'기관', pct:8.41, shares:'4,789만주', chg:'+0.18%', chgType:'up', recent:'2025.01.15 매수' },
+    { investor:'블랙록', type:'외국인', pct:4.23, shares:'2,401만주', chg:'-0.12%', chgType:'down', recent:'2025.01.10 매도' },
+    { investor:'뱅가드그룹', type:'외국인', pct:3.91, shares:'2,218만주', chg:'+0.05%', chgType:'up', recent:'2025.01.08 매수' },
+    { investor:'노르웨이국부펀드', type:'외국인', pct:1.84, shares:'1,044만주', chg:'+0.11%', chgType:'up', recent:'2025.01.07 매수' },
+    { investor:'삼성물산', type:'특수관계인', pct:5.01, shares:'2,843만주', chg:'0%', chgType:'hold', recent:'변동없음' },
+  ],
+  'SK하이닉스': [
+    { investor:'국민연금공단', type:'기관', pct:6.72, shares:'488만주', chg:'-0.12%', chgType:'down', recent:'2025.01.12 매도' },
+    { investor:'블랙록', type:'외국인', pct:5.02, shares:'364만주', chg:'+0.91%', chgType:'up', recent:'2025.01.14 매수' },
+    { investor:'SK(주)', type:'특수관계인', pct:20.07, shares:'1,456만주', chg:'0%', chgType:'hold', recent:'변동없음' },
+  ],
+  'AAPL': [
+    { investor:'워런 버핏 (Berkshire)', type:'전설 투자자', pct:5.83, shares:'905,560,000', chg:'0%', chgType:'hold', recent:'Q4 2024 보유 유지' },
+    { investor:'뱅가드그룹', type:'외국인', pct:8.91, shares:'1,380,000,000', chg:'+0.3%', chgType:'up', recent:'Q4 2024 매수' },
+    { investor:'블랙록', type:'외국인', pct:6.12, shares:'948,000,000', chg:'+0.2%', chgType:'up', recent:'Q4 2024 매수' },
+    { investor:'국민연금공단', type:'기관', pct:0.21, shares:'32,400,000', chg:'+2.3%', chgType:'up', recent:'Q4 2024 매수' },
+  ],
+  'NVDA': [
+    { investor:'데이비드 테퍼', type:'전설 투자자', pct:0.08, shares:'2,400,000', chg:'+5.1%', chgType:'up', recent:'Q4 2024 매수' },
+    { investor:'조지 소로스', type:'전설 투자자', pct:0.04, shares:'1,200,000', chg:'+8.9%', chgType:'up', recent:'Q4 2024 신규매수' },
+    { investor:'뱅가드그룹', type:'외국인', pct:7.21, shares:'175,000,000', chg:'+1.2%', chgType:'up', recent:'Q4 2024 매수' },
+    { investor:'국민연금공단', type:'기관', pct:0.09, shares:'24,100,000', chg:'+8.9%', chgType:'up', recent:'Q4 2024 매수' },
+  ],
+  '현대차': [
+    { investor:'국민연금공단', type:'기관', pct:8.23, shares:'390만주', chg:'+0.56%', chgType:'up', recent:'2025.01.11 매수' },
+    { investor:'뱅가드그룹', type:'외국인', pct:6.89, shares:'327만주', chg:'+0.56%', chgType:'up', recent:'2025.01.11 매수' },
+    { investor:'블랙록', type:'외국인', pct:3.12, shares:'148만주', chg:'-0.22%', chgType:'down', recent:'2025.01.08 매도' },
+  ],
+  'TSLA': [
+    { investor:'데이비드 테퍼', type:'전설 투자자', pct:0.12, shares:'3,800,000', chg:'-1.4%', chgType:'down', recent:'Q4 2024 일부 매도' },
+    { investor:'조지 소로스', type:'전설 투자자', pct:0.03, shares:'950,000', chg:'-2.1%', chgType:'down', recent:'Q4 2024 일부 매도' },
+    { investor:'뱅가드그룹', type:'외국인', pct:6.84, shares:'218,000,000', chg:'+0.4%', chgType:'up', recent:'Q4 2024 소폭 매수' },
+    { investor:'국민연금공단', type:'기관', pct:0.07, shares:'8,900,000', chg:'-2.1%', chgType:'down', recent:'Q4 2024 매도' },
+  ],
+  'SK하이닉스': [
+    { investor:'국민연금공단', type:'기관', pct:6.72, shares:'488만주', chg:'-0.12%', chgType:'down', recent:'2025.01.12 매도' },
+    { investor:'블랙록', type:'외국인', pct:5.02, shares:'364만주', chg:'+0.91%', chgType:'up', recent:'2025.01.14 매수' },
+  ],
+};
+
+// ═══════════════════════════════════════════
+// 탭 전환
+// ═══════════════════════════════════════════
+function switchTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  event.currentTarget.classList.add('active');
+}
+
+function switchNps(market, btn) {
+  document.getElementById('nps-kr').style.display = market === 'kr' ? 'block' : 'none';
+  document.getElementById('nps-us').style.display = market === 'us' ? 'block' : 'none';
+  document.querySelectorAll('#tab-nps .filter-bar .filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ═══════════════════════════════════════════
+// 렌더링 함수
+// ═══════════════════════════════════════════
+function renderDart(data) {
+  const tbody = document.getElementById('dart-tbody');
+  if (!data.length) {
+    tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="empty-state-icon">🔍</div><div class="empty-state-text">해당 조건의 공시가 없습니다</div></div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = data.map(d => `
+    <tr>
+      <td><span class="ticker">${d.ticker}</span><br><span style="font-size:12px;color:var(--text2)">${d.name}</span></td>
+      <td><div class="entity-name">${d.reporter}</div></td>
+      <td><span class="change-badge ${d.type}">${d.type==='buy'?'▲ 매수 증가':d.type==='sell'?'▼ 매도 감소':'★ 신규 진입'}</span></td>
+      <td>
+        <div class="pct-bar-wrap">
+          <div class="pct-bar"><div class="pct-bar-fill" style="width:${Math.min(d.curr*8,100)}%"></div></div>
+          <span class="pct-text">${d.curr}%</span>
+        </div>
+      </td>
+      <td><span class="change-badge ${d.type}">${d.shares}주</span></td>
+      <td><span class="date-text">${d.date}</span></td>
+    </tr>
+  `).join('');
+  // 통계 업데이트
+  document.getElementById('stat-total').textContent = data.length;
+  document.getElementById('stat-buy').textContent = data.filter(d=>d.type==='buy').length;
+  document.getElementById('stat-sell').textContent = data.filter(d=>d.type==='sell').length;
+  document.getElementById('stat-new').textContent = data.filter(d=>d.type==='new').length;
+}
+
+function renderNpsKr() {
+  document.getElementById('nps-kr-tbody').innerHTML = NPS_KR_DATA.map(d => `
+    <tr>
+      <td style="font-family:var(--mono);color:var(--text3)">${d.rank}</td>
+      <td><span class="ticker">${d.ticker}</span><br><span style="font-size:12px;color:var(--text2)">${d.name}</span></td>
+      <td>
+        <div class="pct-bar-wrap">
+          <div class="pct-bar"><div class="pct-bar-fill" style="width:${Math.min(d.pct*8,100)}%"></div></div>
+          <span class="pct-text">${d.pct}%</span>
+        </div>
+      </td>
+      <td style="font-family:var(--mono);font-size:12px">${d.shares}</td>
+      <td style="font-family:var(--mono);font-size:12px">${d.value}</td>
+      <td><span class="change-badge ${d.chgType}">${d.chgType==='up'?'▲':'▼'} ${d.chg}</span></td>
+    </tr>
+  `).join('');
+}
+
+function renderNpsUs() {
+  document.getElementById('nps-us-tbody').innerHTML = NPS_US_DATA.map(d => `
+    <tr>
+      <td style="font-family:var(--mono);color:var(--text3)">${d.rank}</td>
+      <td><span class="ticker">${d.ticker}</span></td>
+      <td style="color:var(--text2)">${d.name}</td>
+      <td style="font-family:var(--mono);font-size:12px">${d.shares}</td>
+      <td style="font-family:var(--mono);font-size:12px">${d.value}</td>
+      <td><span class="change-badge ${d.chgType}">${d.chgType==='up'?'▲':'▼'} ${d.chg}</span></td>
+    </tr>
+  `).join('');
+}
+
+function renderLegends() {
+  document.getElementById('legends-grid').innerHTML = LEGENDS_DATA.map(l => `
+    <div class="whale-card">
+      <div class="whale-card-header">
+        <div>
+          <div class="whale-name">${l.emoji} ${l.name}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">${l.firm}</div>
+        </div>
+        <div class="whale-aum">${l.aum}</div>
+      </div>
+      <div class="whale-holdings">
+        ${l.holdings.map(h => {
+          const color = h.type==='buy' ? 'var(--green)' : h.type==='sell' ? 'var(--red)' : 'var(--text3)';
+          return `
+          <div class="holding-row">
+            <span class="holding-ticker">${h.ticker}</span>
+            <div class="holding-bar-wrap">
+              <div class="holding-bar"><div class="holding-bar-fill" style="width:${Math.min(h.pct*2,100)}%"></div></div>
+            </div>
+            <span class="holding-pct">${h.pct}%</span>
+            <span class="holding-chg" style="color:${color}">${h.chg}</span>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+// ═══════════════════════════════════════════
+// 필터 / 검색
+// ═══════════════════════════════════════════
+let dartFilter = 'all';
+let dartSearch = '';
+
+function filterDart(type, btn) {
+  dartFilter = type;
+  document.querySelectorAll('#tab-dart .filter-bar .filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  applyDartFilter();
+}
+
+function searchDart(val) {
+  dartSearch = val.trim();
+  applyDartFilter();
+}
+
+function applyDartFilter() {
+  let data = [...DART_DATA];
+  if (dartFilter !== 'all') data = data.filter(d => d.type === dartFilter);
+  if (dartSearch) data = data.filter(d => d.name.includes(dartSearch) || d.ticker.includes(dartSearch) || d.reporter.includes(dartSearch));
+  renderDart(data);
+}
+
+let whaleFilter = 'all';
+function filterWhaleMarket(type, btn) {
+  whaleFilter = type;
+  document.querySelectorAll('#tab-whale .filter-bar .filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function whaleSearch(val) {
+  const key = val.trim();
+  if (!key) {
+    document.getElementById('whale-tbody').innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="empty-state-icon">🔍</div><div class="empty-state-text">종목을 입력하거나 위 버튼을 눌러 고래를 추적하세요</div></div></td></tr>';
+    return;
+  }
+  const found = Object.keys(WHALE_STOCK_DATA).find(k => k.includes(key) || key.includes(k));
+  if (found) renderWhale(found, WHALE_STOCK_DATA[found]);
+  else {
+    document.getElementById('whale-tbody').innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="empty-state-icon">🐟</div><div class="empty-state-text">해당 종목의 고래 데이터가 없습니다</div></div></td></tr>';
+  }
+}
+
+function quickWhale(name) {
+  document.getElementById('whale-search-input').value = name;
+  whaleSearch(name);
+}
+
+function renderWhale(name, data) {
+  document.getElementById('whale-tbody').innerHTML = `
+    <tr style="background:var(--surface2)">
+      <td colspan="6" style="padding:10px 14px;font-size:12px;color:var(--text3);font-family:var(--mono)">
+        🐋 <strong style="color:var(--text)">${name}</strong> 보유 기관·투자자 목록
+      </td>
+    </tr>
+    ${data.map(d => `
+      <tr>
+        <td><div class="entity-name">${d.investor}</div></td>
+        <td><span class="change-badge ${d.type==='기관'?'new':d.type==='전설 투자자'?'buy':'hold'}">${d.type}</span></td>
+        <td>
+          <div class="pct-bar-wrap">
+            <div class="pct-bar"><div class="pct-bar-fill" style="width:${Math.min(d.pct*8,100)}%"></div></div>
+            <span class="pct-text">${d.pct}%</span>
+          </div>
+        </td>
+        <td style="font-family:var(--mono);font-size:12px">${d.shares}</td>
+        <td><span class="change-badge ${d.chgType}">${d.chgType==='up'?'▲':d.chgType==='down'?'▼':'—'} ${d.chg}</span></td>
+        <td style="font-size:11px;color:var(--text3)">${d.recent}</td>
+      </tr>
+    `).join('')}
+  `;
+}
+
+// ═══════════════════════════════════════════
+// Claude AI 분석
+// ═══════════════════════════════════════════
+async function analyzeWithAI(section) {
+  const panel = document.getElementById('ai-' + section);
+  const content = document.getElementById('ai-' + section + '-content');
+
+  panel.classList.add('visible');
+  content.innerHTML = '<div class="ai-loading"><div class="ai-spinner"></div> Claude가 분석 중입니다...</div>';
+
+  const prompts = {
+    dart: `다음은 최근 DART(금융감독원) 대량 지분 변동 공시 데이터입니다:\n${JSON.stringify(DART_DATA, null, 2)}\n\n이 데이터를 분석해서 다음을 한국어로 요약해주세요:\n1. 주목할 만한 지분 변동 상위 3건과 그 의미\n2. 전반적인 기관 투자자 동향 (매수/매도 우세 여부)\n3. 특정 섹터 쏠림 현상이 있다면 분석\n4. 투자자 관점에서의 시사점\n\n200자 내외로 핵심만 간결하게 작성해주세요.`,
+    nps: `다음은 국민연금의 국내 주식 포트폴리오 데이터입니다:\n${JSON.stringify(NPS_KR_DATA, null, 2)}\n\n이 데이터를 분석해서 다음을 한국어로 요약해주세요:\n1. 국민연금의 최근 투자 방향성\n2. 주목할 종목과 비중 변화\n3. 섹터별 집중도 분석\n4. 개인 투자자 참고사항\n\n200자 내외로 핵심만 간결하게 작성해주세요.`,
+    legends: `다음은 세계 주요 투자 전설들의 최근 포트폴리오 변동 데이터입니다:\n${JSON.stringify(LEGENDS_DATA, null, 2)}\n\n이 데이터를 분석해서 다음을 한국어로 요약해주세요:\n1. 투자 전설들이 공통적으로 매수하는 종목/섹터\n2. 눈에 띄는 이견이 있는 종목\n3. 중국 관련 포지션 변화\n4. 전체적인 투자 심리와 방향성\n\n200자 내외로 핵심만 간결하게 작성해주세요.`,
+    whale: `다음은 국내외 주요 종목별 기관·고래 투자자 현황입니다:\n${JSON.stringify(WHALE_STOCK_DATA, null, 2)}\n\n이 데이터를 분석해서 다음을 한국어로 요약해주세요:\n1. 가장 많은 고래가 집중된 종목\n2. 고래들이 동시에 매도하는 위험 신호 종목\n3. 신규 진입 또는 급격한 비중 증가 종목\n4. 개인 투자자 시사점\n\n200자 내외로 핵심만 간결하게 작성해주세요.`,
+  };
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompts[section] }]
+      })
+    });
+    const data = await res.json();
+    const text = data.content?.[0]?.text || '분석 결과를 불러올 수 없습니다.';
+    content.textContent = text;
+  } catch (e) {
+    content.textContent = '⚠️ AI 분석 연결 오류. API 키 설정을 확인해주세요.';
+  }
+}
+
+// ═══════════════════════════════════════════
+// 초기 렌더링
+// ═══════════════════════════════════════════
+renderDart(DART_DATA);
+renderNpsKr();
+renderNpsUs();
+renderLegends();
+</script>
+</body>
+</html>
