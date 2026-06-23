@@ -553,7 +553,34 @@
     color: var(--text3);
     font-family: var(--mono);
   }
+
+  /* ── 차트 공통 ── */
+  .chart-section { margin-bottom: 28px; }
+  .chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .chart-row.single { grid-template-columns: 1fr; }
+  @media (max-width: 900px) { .chart-row { grid-template-columns: 1fr; } }
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  }
+  .chart-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+  .chart-sub { font-size: 11px; color: var(--text3); font-family: var(--mono); margin-bottom: 14px; }
+  .treemap-wrap { display: flex; flex-wrap: wrap; gap: 3px; height: 200px; align-content: flex-start; }
+  .treemap-cell {
+    border-radius: 5px;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column;
+    cursor: pointer; transition: opacity 0.15s;
+    padding: 4px; overflow: hidden;
+  }
+  .treemap-cell:hover { opacity: 0.82; }
+  .treemap-label { font-size: 11px; font-weight: 700; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.35); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  .treemap-pct { font-size: 10px; color: rgba(255,255,255,0.82); }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -581,6 +608,10 @@
   </button>
   <button class="tab-btn" onclick="switchTab('whale')">
     <div class="tab-dot"></div> 종목별 고래 추적
+  </button>
+  <button class="tab-btn" onclick="switchTab('krx')" style="position:relative">
+    <div class="tab-dot"></div> 외국인·기관 순매수
+    <span style="position:absolute;top:6px;right:6px;width:6px;height:6px;border-radius:50%;background:#10b981"></span>
   </button>
 </div>
 
@@ -611,6 +642,29 @@
     </div>
   </div>
 
+
+  <!-- DART 차트 -->
+  <div class="chart-section">
+    <div class="chart-row">
+      <div class="chart-card">
+        <div class="chart-title">변동 유형별 건수</div>
+        <div class="chart-sub">매수 / 매도 / 신규진입</div>
+        <div style="height:200px"><canvas id="chart-dart-type"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">보고자별 지분 변동</div>
+        <div class="chart-sub">기관별 변동 규모 비교</div>
+        <div style="height:200px"><canvas id="chart-dart-reporter"></canvas></div>
+      </div>
+    </div>
+    <div class="chart-row single">
+      <div class="chart-card">
+        <div class="chart-title">종목별 현재 보유 비율</div>
+        <div class="chart-sub">최근 공시 기준 지분율</div>
+        <div style="height:200px"><canvas id="chart-dart-pct"></canvas></div>
+      </div>
+    </div>
+  </div>
   <div class="stats-row">
     <div class="stat-card">
       <div class="stat-label">오늘 신규 공시</div>
@@ -686,6 +740,29 @@
     </div>
   </div>
 
+
+  <!-- 국민연금 차트 -->
+  <div class="chart-section" id="nps-charts">
+    <div class="chart-row">
+      <div class="chart-card">
+        <div class="chart-title">섹터별 비중</div>
+        <div class="chart-sub">국내 포트폴리오 트리맵</div>
+        <div class="treemap-wrap" id="treemap-nps"></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Top 7 보유 비율</div>
+        <div class="chart-sub">지분율 기준 수평 바차트</div>
+        <div style="height:200px"><canvas id="chart-nps-bar"></canvas></div>
+      </div>
+    </div>
+    <div class="chart-row single">
+      <div class="chart-card">
+        <div class="chart-title">전분기 대비 변동</div>
+        <div class="chart-sub">▲매수 / ▼매도 라인차트</div>
+        <div style="height:180px"><canvas id="chart-nps-line"></canvas></div>
+      </div>
+    </div>
+  </div>
   <!-- 국내/미국 서브탭 -->
   <div class="filter-bar" style="margin-bottom:20px">
     <button class="filter-btn active" onclick="switchNps('kr', this)">🇰🇷 국내 주식</button>
@@ -786,6 +863,29 @@
     </div>
   </div>
 
+
+  <!-- 투자 전설 차트 -->
+  <div class="chart-section">
+    <div class="chart-row">
+      <div class="chart-card">
+        <div class="chart-title">투자자별 AUM 비교</div>
+        <div class="chart-sub">운용 자산 규모 (추정)</div>
+        <div style="height:200px"><canvas id="chart-legends-aum"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">공통 보유 종목 Top 5</div>
+        <div class="chart-sub">여러 전설이 동시 보유한 종목</div>
+        <div style="height:200px"><canvas id="chart-legends-common"></canvas></div>
+      </div>
+    </div>
+    <div class="chart-row single">
+      <div class="chart-card">
+        <div class="chart-title">버핏 포트폴리오 비중</div>
+        <div class="chart-sub">Berkshire Hathaway 파이차트</div>
+        <div style="height:220px"><canvas id="chart-legends-pie"></canvas></div>
+      </div>
+    </div>
+  </div>
   <div class="whale-grid" id="legends-grid">
     <!-- JS로 채움 -->
   </div>
@@ -840,6 +940,22 @@
     <button class="filter-btn" onclick="quickWhale('TSLA')">TSLA</button>
   </div>
 
+
+  <!-- 고래 추적 차트 -->
+  <div class="chart-section" id="whale-charts" style="display:none">
+    <div class="chart-row">
+      <div class="chart-card">
+        <div class="chart-title">투자자별 보유 비율</div>
+        <div class="chart-sub">선택 종목 기준</div>
+        <div style="height:200px"><canvas id="chart-whale-bar"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">투자자 유형 분포</div>
+        <div class="chart-sub">기관 / 외국인 / 전설 비중</div>
+        <div style="height:200px"><canvas id="chart-whale-pie"></canvas></div>
+      </div>
+    </div>
+  </div>
   <div class="table-wrap">
     <table>
       <thead>
@@ -849,6 +965,111 @@
       </thead>
       <tbody id="whale-tbody">
         <tr><td colspan="6"><div class="empty-state"><div class="empty-state-icon">🔍</div><div class="empty-state-text">종목을 입력하거나 위 버튼을 눌러 고래를 추적하세요</div></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════
+     TAB 5: 외국인·기관 순매수
+═══════════════════════════════════════════ -->
+<div id="tab-krx" class="tab-panel">
+  <div class="section-header">
+    <div>
+      <div class="section-title">외국인·기관 순매수</div>
+      <div class="section-sub">KRX 당일 장마감 기준 · 매일 16:00 자동 업데이트</div>
+    </div>
+    <button class="ai-btn" onclick="analyzeWithAI('krx')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+      AI 요약 분석
+    </button>
+  </div>
+
+  <div class="ai-panel" id="ai-krx">
+    <div class="ai-panel-header">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+      AI 분석 결과 (Claude)
+    </div>
+    <div class="ai-panel-content" id="ai-krx-content">
+      <div class="ai-loading"><div class="ai-spinner"></div> 분석 중...</div>
+    </div>
+  </div>
+
+  <!-- 업데이트 시각 + 새로고침 -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block"></span>
+      <span style="font-size:12px;color:var(--text3);font-family:var(--mono)" id="krx-updated">장마감 후 자동 업데이트</span>
+    </div>
+    <button class="filter-btn" onclick="loadKrxData()" style="display:flex;align-items:center;gap:4px">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+      새로고침
+    </button>
+  </div>
+
+  <!-- 통계 카드 -->
+  <div class="stats-row" id="krx-stats">
+    <div class="stat-card">
+      <div class="stat-label">외국인 순매수 1위</div>
+      <div class="stat-value up" id="krx-f-top">—</div>
+      <div class="stat-sub" id="krx-f-top-val">로딩 중</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">기관 순매수 1위</div>
+      <div class="stat-value up" id="krx-i-top">—</div>
+      <div class="stat-sub" id="krx-i-top-val">로딩 중</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">외국인 순매도 1위</div>
+      <div class="stat-value down" id="krx-f-sell">—</div>
+      <div class="stat-sub" id="krx-f-sell-val">로딩 중</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">동시 순매수</div>
+      <div class="stat-value neutral" id="krx-both">—</div>
+      <div class="stat-sub">외국인+기관 동시 매수 종목</div>
+    </div>
+  </div>
+
+  <!-- 필터 -->
+  <div class="filter-bar">
+    <button class="filter-btn active" onclick="filterKrx('all',this)">전체</button>
+    <button class="filter-btn" onclick="filterKrx('foreign',this)">외국인</button>
+    <button class="filter-btn" onclick="filterKrx('institute',this)">기관</button>
+    <button class="filter-btn" onclick="filterKrx('both',this)">동시매수</button>
+    <button class="filter-btn" onclick="filterKrx('sell',this)">순매도</button>
+  </div>
+
+  <!-- 차트 -->
+  <div class="chart-row" style="margin-bottom:16px">
+    <div class="chart-card">
+      <div class="chart-title">외국인 순매수 TOP10</div>
+      <div class="chart-sub">당일 기준 (억원)</div>
+      <div style="height:220px"><canvas id="chart-krx-foreign"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">기관 순매수 TOP10</div>
+      <div class="chart-sub">당일 기준 (억원)</div>
+      <div style="height:220px"><canvas id="chart-krx-institute"></canvas></div>
+    </div>
+  </div>
+
+  <!-- 테이블 -->
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>종목</th>
+          <th>외국인 순매수</th>
+          <th>기관 순매수</th>
+          <th>합계</th>
+          <th>신호</th>
+          <th>등락률</th>
+        </tr>
+      </thead>
+      <tbody id="krx-tbody">
+        <tr><td colspan="6"><div class="empty-state"><div class="empty-state-icon">📊</div><div class="empty-state-text">로딩 중...</div></div></td></tr>
       </tbody>
     </table>
   </div>
@@ -1165,6 +1386,7 @@ function quickWhale(name) {
 }
 
 function renderWhale(name, data) {
+  renderWhaleCharts(name, data);
   document.getElementById('whale-tbody').innerHTML = `
     <tr style="background:var(--surface2)">
       <td colspan="6" style="padding:10px 14px;font-size:12px;color:var(--text3);font-family:var(--mono)">
@@ -1200,6 +1422,7 @@ async function analyzeWithAI(section) {
   content.innerHTML = '<div class="ai-loading"><div class="ai-spinner"></div> Claude가 분석 중입니다...</div>';
 
   const prompts = {
+    krx: KRX_PROMPT(),
     dart: `다음은 최근 DART(금융감독원) 대량 지분 변동 공시 데이터입니다:\n${JSON.stringify(DART_DATA, null, 2)}\n\n이 데이터를 분석해서 다음을 한국어로 요약해주세요:\n1. 주목할 만한 지분 변동 상위 3건과 그 의미\n2. 전반적인 기관 투자자 동향 (매수/매도 우세 여부)\n3. 특정 섹터 쏠림 현상이 있다면 분석\n4. 투자자 관점에서의 시사점\n\n200자 내외로 핵심만 간결하게 작성해주세요.`,
     nps: `다음은 국민연금의 국내 주식 포트폴리오 데이터입니다:\n${JSON.stringify(NPS_KR_DATA, null, 2)}\n\n이 데이터를 분석해서 다음을 한국어로 요약해주세요:\n1. 국민연금의 최근 투자 방향성\n2. 주목할 종목과 비중 변화\n3. 섹터별 집중도 분석\n4. 개인 투자자 참고사항\n\n200자 내외로 핵심만 간결하게 작성해주세요.`,
     legends: `다음은 세계 주요 투자 전설들의 최근 포트폴리오 변동 데이터입니다:\n${JSON.stringify(LEGENDS_DATA, null, 2)}\n\n이 데이터를 분석해서 다음을 한국어로 요약해주세요:\n1. 투자 전설들이 공통적으로 매수하는 종목/섹터\n2. 눈에 띄는 이견이 있는 종목\n3. 중국 관련 포지션 변화\n4. 전체적인 투자 심리와 방향성\n\n200자 내외로 핵심만 간결하게 작성해주세요.`,
@@ -1224,13 +1447,470 @@ async function analyzeWithAI(section) {
   }
 }
 
+
+// ═══════════════════════════════════════════
+// 차트 공통 설정
+// ═══════════════════════════════════════════
+const CHART_COLORS = ['#2563eb','#7c3aed','#059669','#dc2626','#d97706','#0891b2','#be185d'];
+const CHART_COLORS_LIGHT = ['rgba(37,99,235,0.15)','rgba(124,58,237,0.15)','rgba(5,150,105,0.15)','rgba(220,38,38,0.15)','rgba(217,119,6,0.15)','rgba(8,145,178,0.15)','rgba(190,24,93,0.15)'];
+
+Chart.defaults.font.family = "'Pretendard', -apple-system, sans-serif";
+Chart.defaults.color = '#94a3b8';
+Chart.defaults.plugins.legend.labels.boxWidth = 10;
+Chart.defaults.plugins.legend.labels.padding = 12;
+
+const chartInstances = {};
+function destroyChart(id) {
+  if (chartInstances[id]) { chartInstances[id].destroy(); delete chartInstances[id]; }
+}
+
+// ── DART 차트 ──
+function renderDartCharts(data) {
+  // 1) 변동 유형 도넛
+  destroyChart('dart-type');
+  const buyN = data.filter(d=>d.type==='buy').length;
+  const sellN = data.filter(d=>d.type==='sell').length;
+  const newN = data.filter(d=>d.type==='new').length;
+  chartInstances['dart-type'] = new Chart(document.getElementById('chart-dart-type'), {
+    type: 'doughnut',
+    data: {
+      labels: ['매수 증가', '매도 감소', '신규 진입'],
+      datasets: [{ data: [buyN, sellN, newN], backgroundColor: ['#059669','#dc2626','#d97706'], borderWidth: 0 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom' } }
+    }
+  });
+
+  // 2) 보고자별 바차트
+  destroyChart('dart-reporter');
+  const reporters = [...new Set(data.map(d=>d.reporter))].slice(0,6);
+  chartInstances['dart-reporter'] = new Chart(document.getElementById('chart-dart-reporter'), {
+    type: 'bar',
+    data: {
+      labels: reporters,
+      datasets: [{
+        label: '공시 건수',
+        data: reporters.map(r => data.filter(d=>d.reporter===r).length),
+        backgroundColor: CHART_COLORS,
+        borderRadius: 4, borderSkipped: false
+      }]
+    },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { x: { grid: { display: false } }, y: { grid: { color: '#e2e8f0' }, ticks: { stepSize: 1 } } }
+    }
+  });
+
+  // 3) 지분율 라인차트
+  destroyChart('dart-pct');
+  chartInstances['dart-pct'] = new Chart(document.getElementById('chart-dart-pct'), {
+    type: 'bar',
+    data: {
+      labels: data.map(d=>d.name),
+      datasets: [
+        { label: '현재 지분율(%)', data: data.map(d=>d.curr), backgroundColor: CHART_COLORS[0], borderRadius: 4 },
+        { label: '이전 지분율(%)', data: data.map(d=>d.prev), backgroundColor: '#e2e8f0', borderRadius: 4 }
+      ]
+    },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom' } },
+      scales: { x: { grid: { display: false } }, y: { grid: { color: '#e2e8f0' } } }
+    }
+  });
+}
+
+// ── 국민연금 차트 ──
+function renderNpsCharts() {
+  // 트리맵 (SVG 직접 구현)
+  const treemapEl = document.getElementById('treemap-nps');
+  if (treemapEl) {
+    const total = NPS_KR_DATA.reduce((s,d)=>s+d.pct,0);
+    const colors = CHART_COLORS;
+    const sectors = { '반도체':['005930','000660'], 'IT':['035420'], '화학':['051910'], '자동차':['005380'], '바이오':['207940'], '배터리':['006400'] };
+    const sectorData = Object.entries(sectors).map(([name, tickers], i) => {
+      const pct = NPS_KR_DATA.filter(d=>tickers.includes(d.ticker)).reduce((s,d)=>s+d.pct,0);
+      return { name, pct, color: colors[i] };
+    }).sort((a,b)=>b.pct-a.pct);
+
+    treemapEl.innerHTML = sectorData.map(s => {
+      const w = Math.max(60, Math.round((s.pct / total) * 100));
+      return `<div class="treemap-cell" style="background:${s.color};flex:${w} 0 auto;min-width:60px">
+        <span class="treemap-label">${s.name}</span>
+        <span class="treemap-pct">${s.pct.toFixed(1)}%</span>
+      </div>`;
+    }).join('');
+  }
+
+  // 수평 바차트 - Top 7 지분율
+  destroyChart('nps-bar');
+  chartInstances['nps-bar'] = new Chart(document.getElementById('chart-nps-bar'), {
+    type: 'bar',
+    data: {
+      labels: NPS_KR_DATA.map(d=>d.name),
+      datasets: [{
+        label: '지분율(%)',
+        data: NPS_KR_DATA.map(d=>d.pct),
+        backgroundColor: CHART_COLORS,
+        borderRadius: 4
+      }]
+    },
+    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { x: { grid: { color: '#e2e8f0' } }, y: { grid: { display: false } } }
+    }
+  });
+
+  // 라인차트 - 전분기 대비
+  destroyChart('nps-line');
+  const changeData = NPS_KR_DATA.map(d => parseFloat(d.chg.replace('%','')));
+  chartInstances['nps-line'] = new Chart(document.getElementById('chart-nps-line'), {
+    type: 'line',
+    data: {
+      labels: NPS_KR_DATA.map(d=>d.name),
+      datasets: [{
+        label: '전분기 대비(%)',
+        data: changeData,
+        borderColor: '#2563eb',
+        backgroundColor: 'rgba(37,99,235,0.08)',
+        fill: true,
+        tension: 0.4,
+        pointBackgroundColor: changeData.map(v=>v>=0?'#059669':'#dc2626'),
+        pointRadius: 5
+      }]
+    },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false } },
+        y: { grid: { color: '#e2e8f0' }, ticks: { callback: v => v+'%' } }
+      }
+    }
+  });
+}
+
+// ── 투자 전설 차트 ──
+function renderLegendsCharts() {
+  // AUM 바차트
+  destroyChart('legends-aum');
+  const aumValues = LEGENDS_DATA.map(l => parseFloat(l.aum.replace(/[^0-9.]/g,'')));
+  chartInstances['legends-aum'] = new Chart(document.getElementById('chart-legends-aum'), {
+    type: 'bar',
+    data: {
+      labels: LEGENDS_DATA.map(l=>l.name),
+      datasets: [{
+        label: 'AUM (B$)',
+        data: aumValues,
+        backgroundColor: CHART_COLORS,
+        borderRadius: 4, borderSkipped: false
+      }]
+    },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false } },
+        y: { grid: { color: '#e2e8f0' }, ticks: { callback: v => '$'+v+'B' } }
+      }
+    }
+  });
+
+  // 공통 보유 종목
+  destroyChart('legends-common');
+  const tickerCount = {};
+  LEGENDS_DATA.forEach(l => l.holdings.forEach(h => {
+    tickerCount[h.ticker] = (tickerCount[h.ticker]||0)+1;
+  }));
+  const sorted = Object.entries(tickerCount).sort((a,b)=>b[1]-a[1]).slice(0,7);
+  chartInstances['legends-common'] = new Chart(document.getElementById('chart-legends-common'), {
+    type: 'bar',
+    data: {
+      labels: sorted.map(x=>x[0]),
+      datasets: [{
+        label: '보유 투자자 수',
+        data: sorted.map(x=>x[1]),
+        backgroundColor: sorted.map((_,i)=>CHART_COLORS[i%7]),
+        borderRadius: 4
+      }]
+    },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false } },
+        y: { grid: { color: '#e2e8f0' }, ticks: { stepSize: 1 } }
+      }
+    }
+  });
+
+  // 버핏 파이차트
+  destroyChart('legends-pie');
+  const buffett = LEGENDS_DATA.find(l=>l.name==='워런 버핏');
+  chartInstances['legends-pie'] = new Chart(document.getElementById('chart-legends-pie'), {
+    type: 'pie',
+    data: {
+      labels: buffett.holdings.map(h=>h.ticker),
+      datasets: [{
+        data: buffett.holdings.map(h=>h.pct),
+        backgroundColor: CHART_COLORS,
+        borderWidth: 2, borderColor: '#fff'
+      }]
+    },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'right' } }
+    }
+  });
+}
+
+// ── 고래 추적 차트 ──
+function renderWhaleCharts(name, data) {
+  document.getElementById('whale-charts').style.display = 'block';
+
+  // 보유 비율 바차트
+  destroyChart('whale-bar');
+  chartInstances['whale-bar'] = new Chart(document.getElementById('chart-whale-bar'), {
+    type: 'bar',
+    data: {
+      labels: data.map(d=>d.investor),
+      datasets: [{
+        label: '보유 비율(%)',
+        data: data.map(d=>d.pct),
+        backgroundColor: data.map(d=>d.chgType==='up'?'#059669':d.chgType==='down'?'#dc2626':'#2563eb'),
+        borderRadius: 4
+      }]
+    },
+    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false },
+        title: { display: true, text: name + ' 보유 투자자', font: { size: 12 } }
+      },
+      scales: {
+        x: { grid: { color: '#e2e8f0' }, ticks: { callback: v=>v+'%' } },
+        y: { grid: { display: false } }
+      }
+    }
+  });
+
+  // 유형 파이차트
+  destroyChart('whale-pie');
+  const types = {};
+  data.forEach(d=>{ types[d.type]=(types[d.type]||0)+1; });
+  chartInstances['whale-pie'] = new Chart(document.getElementById('chart-whale-pie'), {
+    type: 'doughnut',
+    data: {
+      labels: Object.keys(types),
+      datasets: [{
+        data: Object.values(types),
+        backgroundColor: CHART_COLORS,
+        borderWidth: 0
+      }]
+    },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom' } }
+    }
+  });
+}
+
+
+// ═══════════════════════════════════════════
+// KRX 외국인·기관 순매수 데이터
+// ═══════════════════════════════════════════
+
+// 샘플 데이터 (실제: KRX API or 네이버금융 스크래핑)
+const KRX_SAMPLE = [
+  { ticker:'005930', name:'삼성전자',   foreign:+2847, institute:+1203, change:+1.24 },
+  { ticker:'000660', name:'SK하이닉스', foreign:+1923, institute: +892, change:+2.31 },
+  { ticker:'005380', name:'현대차',     foreign: +834, institute: -234, change:+0.87 },
+  { ticker:'051910', name:'LG화학',     foreign: +723, institute: +445, change:+1.56 },
+  { ticker:'006400', name:'삼성SDI',    foreign: +612, institute: +321, change:+0.94 },
+  { ticker:'035420', name:'NAVER',      foreign: -456, institute: -189, change:-0.73 },
+  { ticker:'207940', name:'삼성바이오', foreign: +389, institute: -102, change:+0.45 },
+  { ticker:'003550', name:'LG',         foreign: +301, institute: +210, change:+1.12 },
+  { ticker:'015760', name:'한국전력',   foreign: -892, institute: +334, change:-2.34 },
+  { ticker:'035720', name:'카카오',     foreign: -723, institute: -445, change:-1.89 },
+  { ticker:'000270', name:'기아',       foreign: +567, institute: +123, change:+0.78 },
+  { ticker:'068270', name:'셀트리온',   foreign: +234, institute: +89,  change:+0.56 },
+  { ticker:'105560', name:'KB금융',     foreign: +198, institute: +312, change:+0.43 },
+  { ticker:'055550', name:'신한지주',   foreign: +176, institute: +267, change:+0.38 },
+  { ticker:'096770', name:'SK이노베이션',foreign:-312, institute:+145,  change:-0.67 },
+];
+
+let krxFilter = 'all';
+let KRX_DATA = [...KRX_SAMPLE];
+
+function loadKrxData() {
+  // 실제 운영 시: fetch('data/krx_today.json') 으로 교체
+  // GitHub Actions가 매일 16:00에 수집한 JSON을 읽어옴
+  KRX_DATA = [...KRX_SAMPLE];
+
+  const now = new Date();
+  document.getElementById('krx-updated').textContent =
+    `마지막 업데이트: ${now.getMonth()+1}/${now.getDate()} ${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')} (장마감 후 자동)`;
+
+  updateKrxStats();
+  renderKrxTable(KRX_DATA);
+  renderKrxCharts(KRX_DATA);
+}
+
+function updateKrxStats() {
+  const sorted = [...KRX_DATA].sort((a,b)=>b.foreign-a.foreign);
+  const fTop = sorted[0];
+  const iTop = [...KRX_DATA].sort((a,b)=>b.institute-a.institute)[0];
+  const fSell = [...KRX_DATA].sort((a,b)=>a.foreign-b.foreign)[0];
+  const both = KRX_DATA.filter(d=>d.foreign>0&&d.institute>0).length;
+
+  document.getElementById('krx-f-top').textContent = fTop.name;
+  document.getElementById('krx-f-top-val').textContent = `+${fTop.foreign.toLocaleString()}억`;
+  document.getElementById('krx-i-top').textContent = iTop.name;
+  document.getElementById('krx-i-top-val').textContent = `+${iTop.institute.toLocaleString()}억`;
+  document.getElementById('krx-f-sell').textContent = fSell.name;
+  document.getElementById('krx-f-sell-val').textContent = `${fSell.foreign.toLocaleString()}억`;
+  document.getElementById('krx-both').textContent = both + '개';
+}
+
+function filterKrx(type, btn) {
+  krxFilter = type;
+  document.querySelectorAll('#tab-krx .filter-bar .filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+
+  let data = [...KRX_DATA];
+  if (type === 'foreign')   data = data.filter(d=>d.foreign>0).sort((a,b)=>b.foreign-a.foreign);
+  if (type === 'institute') data = data.filter(d=>d.institute>0).sort((a,b)=>b.institute-a.institute);
+  if (type === 'both')      data = data.filter(d=>d.foreign>0&&d.institute>0);
+  if (type === 'sell')      data = data.filter(d=>d.foreign<0||d.institute<0);
+
+  renderKrxTable(data);
+}
+
+function renderKrxTable(data) {
+  const tbody = document.getElementById('krx-tbody');
+  if (!data.length) {
+    tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="empty-state-icon">🔍</div><div class="empty-state-text">해당 조건의 종목이 없습니다</div></div></td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = data.map(d => {
+    const total = d.foreign + d.institute;
+    const fClass = d.foreign > 0 ? 'up' : 'down';
+    const iClass = d.institute > 0 ? 'up' : 'down';
+    const tClass = total > 0 ? 'up' : 'down';
+    const chgClass = d.change > 0 ? 'up' : 'down';
+
+    // 신호 판단
+    let signal = '';
+    if (d.foreign > 0 && d.institute > 0)
+      signal = '<span class="change-badge new">★ 동시매수</span>';
+    else if (d.foreign > 500)
+      signal = '<span class="change-badge up">▲ 외국인집중</span>';
+    else if (d.institute > 300)
+      signal = '<span class="change-badge up">▲ 기관집중</span>';
+    else if (d.foreign < -500)
+      signal = '<span class="change-badge down">▼ 외국인이탈</span>';
+    else
+      signal = '<span style="font-size:11px;color:var(--text3)">—</span>';
+
+    return `<tr>
+      <td>
+        <span class="ticker">${d.ticker}</span><br>
+        <span style="font-size:12px;color:var(--text2)">${d.name}</span>
+      </td>
+      <td>
+        <span class="change-badge ${fClass}">
+          ${d.foreign>0?'▲':'▼'} ${Math.abs(d.foreign).toLocaleString()}억
+        </span>
+      </td>
+      <td>
+        <span class="change-badge ${iClass}">
+          ${d.institute>0?'▲':'▼'} ${Math.abs(d.institute).toLocaleString()}억
+        </span>
+      </td>
+      <td>
+        <span class="change-badge ${tClass}" style="font-weight:700">
+          ${total>0?'▲':'▼'} ${Math.abs(total).toLocaleString()}억
+        </span>
+      </td>
+      <td>${signal}</td>
+      <td>
+        <span class="change-badge ${chgClass}">
+          ${d.change>0?'+':''}${d.change}%
+        </span>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function renderKrxCharts(data) {
+  // 외국인 TOP10
+  destroyChart('krx-foreign');
+  const fSorted = [...data].sort((a,b)=>b.foreign-a.foreign).slice(0,10);
+  chartInstances['krx-foreign'] = new Chart(document.getElementById('chart-krx-foreign'), {
+    type: 'bar',
+    data: {
+      labels: fSorted.map(d=>d.name),
+      datasets: [{
+        label: '외국인 순매수(억)',
+        data: fSorted.map(d=>d.foreign),
+        backgroundColor: fSorted.map(d=>d.foreign>0?'rgba(5,150,105,0.8)':'rgba(220,38,38,0.8)'),
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: '#e2e8f0' }, ticks: { callback: v => v+'억' } },
+        y: { grid: { display: false } }
+      }
+    }
+  });
+
+  // 기관 TOP10
+  destroyChart('krx-institute');
+  const iSorted = [...data].sort((a,b)=>b.institute-a.institute).slice(0,10);
+  chartInstances['krx-institute'] = new Chart(document.getElementById('chart-krx-institute'), {
+    type: 'bar',
+    data: {
+      labels: iSorted.map(d=>d.name),
+      datasets: [{
+        label: '기관 순매수(억)',
+        data: iSorted.map(d=>d.institute),
+        backgroundColor: iSorted.map(d=>d.institute>0?'rgba(37,99,235,0.8)':'rgba(220,38,38,0.8)'),
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: '#e2e8f0' }, ticks: { callback: v => v+'억' } },
+        y: { grid: { display: false } }
+      }
+    }
+  });
+}
+
+// KRX AI 분석 프롬프트 추가
+const KRX_PROMPT = () => `다음은 오늘 KRX 외국인·기관 순매수 데이터입니다:
+${JSON.stringify(KRX_DATA.slice(0,10), null, 2)}
+
+이 데이터를 분석해서 다음을 한국어로 요약해주세요:
+1. 외국인과 기관이 동시에 사는 "주목 종목" TOP3
+2. 외국인과 기관 방향이 엇갈리는 종목과 그 의미
+3. 오늘 전반적인 수급 동향 (외국인 매수세 강한지 약한지)
+4. 개인 투자자 참고사항
+
+150자 내외로 핵심만 간결하게 작성해주세요.`;
+
 // ═══════════════════════════════════════════
 // 초기 렌더링
 // ═══════════════════════════════════════════
 renderDart(DART_DATA);
+renderDartCharts(DART_DATA);
 renderNpsKr();
+renderNpsCharts();
 renderNpsUs();
 renderLegends();
+renderLegendsCharts();
+loadKrxData();
 </script>
 </body>
 </html>
