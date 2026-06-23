@@ -613,6 +613,19 @@
     <div class="tab-dot"></div> 외국인·기관 순매수
     <span style="position:absolute;top:6px;right:6px;width:6px;height:6px;border-radius:50%;background:#10b981"></span>
   </button>
+  <button class="tab-btn" onclick="switchTab('live')">
+    <div class="tab-dot"></div> 실시간 시세
+  </button>
+  <button class="tab-btn" onclick="switchTab('news')">
+    <div class="tab-dot"></div> 뉴스 감성
+  </button>
+  <button class="tab-btn" onclick="switchTab('calendar')">
+    <div class="tab-dot"></div> 공시 캘린더
+  </button>
+  <button class="tab-btn" onclick="switchTab('insider')">
+    <div class="tab-dot"></div> 내부자 거래
+  </button>
+  </button>
 </div>
 
 <!-- ═══════════════════════════════════════════
@@ -1071,6 +1084,153 @@
       <tbody id="krx-tbody">
         <tr><td colspan="6"><div class="empty-state"><div class="empty-state-icon">📊</div><div class="empty-state-text">로딩 중...</div></div></td></tr>
       </tbody>
+    </table>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════
+     TAB 6: 실시간 시세 (BTC + 국내 + 미국 + 환율)
+═══════════════════════════════════════════ -->
+<div id="tab-live" class="tab-panel">
+  <div class="section-header">
+    <div>
+      <div class="section-title">실시간 시세</div>
+      <div class="section-sub">BTC · 국내주식 · 미국주식 · 환율 · 금 · 공매도</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <span style="width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block;animation:pulse 2s infinite"></span>
+      <span style="font-size:12px;color:var(--text3);font-family:var(--mono)" id="live-updated">연결 중...</span>
+    </div>
+  </div>
+
+  <!-- 환율·원자재 -->
+  <div style="margin-bottom:8px;font-size:11px;font-weight:600;color:var(--text3);font-family:var(--mono);text-transform:uppercase;letter-spacing:0.5px">환율 · 원자재</div>
+  <div class="stats-row" style="margin-bottom:20px" id="fx-row">
+    <div class="stat-card"><div class="stat-label">USD/KRW</div><div class="stat-value neutral" id="fx-usd">—</div><div class="stat-sub" id="fx-usd-chg">—</div></div>
+    <div class="stat-card"><div class="stat-label">JPY/KRW</div><div class="stat-value neutral" id="fx-jpy">—</div><div class="stat-sub" id="fx-jpy-chg">—</div></div>
+    <div class="stat-card"><div class="stat-label">금 (XAU)</div><div class="stat-value neutral" id="fx-gold">—</div><div class="stat-sub" id="fx-gold-chg">USD/oz</div></div>
+    <div class="stat-card"><div class="stat-label">BTC/USDT</div><div class="stat-value neutral" id="live-btc">—</div><div class="stat-sub" id="live-btc-chg">—</div></div>
+  </div>
+
+  <!-- 국내 주요 종목 -->
+  <div style="margin-bottom:8px;font-size:11px;font-weight:600;color:var(--text3);font-family:var(--mono);text-transform:uppercase;letter-spacing:0.5px">고래 보유 국내 종목</div>
+  <div class="table-wrap" style="margin-bottom:20px">
+    <table>
+      <thead><tr><th>종목</th><th>현재가</th><th>등락</th><th>등락률</th><th>거래량</th><th>52주 신고가</th><th>공매도 잔고</th></tr></thead>
+      <tbody id="live-kr-tbody"></tbody>
+    </table>
+  </div>
+
+  <!-- 미국 주요 종목 -->
+  <div style="margin-bottom:8px;font-size:11px;font-weight:600;color:var(--text3);font-family:var(--mono);text-transform:uppercase;letter-spacing:0.5px">고래 보유 미국 종목</div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Ticker</th><th>현재가</th><th>등락</th><th>등락률</th><th>52주 신고가</th><th>신고가 갱신</th></tr></thead>
+      <tbody id="live-us-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     TAB 7: 뉴스 감성 분석
+═══════════════════════════════════════════ -->
+<div id="tab-news" class="tab-panel">
+  <div class="section-header">
+    <div>
+      <div class="section-title">뉴스 감성 분석</div>
+      <div class="section-sub">고래 보유 종목 관련 뉴스 · Claude AI 감성 분류</div>
+    </div>
+    <button class="ai-btn" onclick="analyzeWithAI('news')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+      AI 전체 분석
+    </button>
+  </div>
+  <div class="ai-panel" id="ai-news">
+    <div class="ai-panel-header"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg> AI 분석 결과</div>
+    <div class="ai-panel-content" id="ai-news-content"><div class="ai-loading"><div class="ai-spinner"></div> 분석 중...</div></div>
+  </div>
+
+  <div class="stats-row" style="margin-bottom:20px">
+    <div class="stat-card"><div class="stat-label">긍정 뉴스</div><div class="stat-value up" id="news-pos">—</div><div class="stat-sub">건</div></div>
+    <div class="stat-card"><div class="stat-label">부정 뉴스</div><div class="stat-value down" id="news-neg">—</div><div class="stat-sub">건</div></div>
+    <div class="stat-card"><div class="stat-label">중립 뉴스</div><div class="stat-value neutral" id="news-neu">—</div><div class="stat-sub">건</div></div>
+    <div class="stat-card"><div class="stat-label">감성 점수</div><div class="stat-value up" id="news-score">—</div><div class="stat-sub">-100 ~ +100</div></div>
+  </div>
+
+  <div class="filter-bar">
+    <button class="filter-btn active" onclick="filterNews('all',this)">전체</button>
+    <button class="filter-btn" onclick="filterNews('pos',this)">긍정</button>
+    <button class="filter-btn" onclick="filterNews('neg',this)">부정</button>
+    <button class="filter-btn" onclick="filterNews('neu',this)">중립</button>
+  </div>
+
+  <div id="news-list" style="display:flex;flex-direction:column;gap:10px;margin-top:12px"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     TAB 8: 공시 캘린더
+═══════════════════════════════════════════ -->
+<div id="tab-calendar" class="tab-panel">
+  <div class="section-header">
+    <div>
+      <div class="section-title">공시 캘린더</div>
+      <div class="section-sub">고래 보유 종목 실적발표 · 배당 · 주주총회 일정</div>
+    </div>
+  </div>
+
+  <!-- 이번달 캘린더 -->
+  <div class="chart-card" style="margin-bottom:20px">
+    <div class="chart-title">2025년 6월 이벤트 캘린더</div>
+    <div class="chart-sub">● 실적발표 &nbsp; ■ 배당기준일 &nbsp; ▲ 주주총회</div>
+    <div id="cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:12px"></div>
+  </div>
+
+  <!-- 다가오는 이벤트 -->
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>날짜</th><th>종목</th><th>이벤트</th><th>예상 EPS</th><th>전년 대비</th><th>고래 보유</th></tr></thead>
+      <tbody id="cal-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     TAB 9: 내부자 거래 (SEC Form 4 + 국내)
+═══════════════════════════════════════════ -->
+<div id="tab-insider" class="tab-panel">
+  <div class="section-header">
+    <div>
+      <div class="section-title">내부자 거래</div>
+      <div class="section-sub">CEO·임원 자사주 거래 · SEC Form 4 · DART 임원 공시</div>
+    </div>
+    <button class="ai-btn" onclick="analyzeWithAI('insider')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+      AI 요약 분석
+    </button>
+  </div>
+  <div class="ai-panel" id="ai-insider">
+    <div class="ai-panel-header"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg> AI 분석 결과</div>
+    <div class="ai-panel-content" id="ai-insider-content"><div class="ai-loading"><div class="ai-spinner"></div> 분석 중...</div></div>
+  </div>
+
+  <div class="stats-row" style="margin-bottom:20px">
+    <div class="stat-card"><div class="stat-label">임원 매수</div><div class="stat-value up" id="ins-buy">—</div><div class="stat-sub">건 (최근 30일)</div></div>
+    <div class="stat-card"><div class="stat-label">임원 매도</div><div class="stat-value down" id="ins-sell">—</div><div class="stat-sub">건 (최근 30일)</div></div>
+    <div class="stat-card"><div class="stat-label">고래+임원 동시매수</div><div class="stat-value up" id="ins-both">—</div><div class="stat-sub">가장 강한 신호</div></div>
+  </div>
+
+  <div class="filter-bar">
+    <button class="filter-btn active" onclick="filterInsider('all',this)">전체</button>
+    <button class="filter-btn" onclick="filterInsider('buy',this)">매수</button>
+    <button class="filter-btn" onclick="filterInsider('sell',this)">매도</button>
+    <button class="filter-btn" onclick="filterInsider('signal',this)">★ 동시매수 신호</button>
+  </div>
+
+  <div class="table-wrap" style="margin-top:12px">
+    <table>
+      <thead><tr><th>종목</th><th>임원명</th><th>직책</th><th>거래 유형</th><th>주식수</th><th>거래금액</th><th>날짜</th><th>신호</th></tr></thead>
+      <tbody id="insider-tbody"></tbody>
     </table>
   </div>
 </div>
@@ -1899,6 +2059,339 @@ ${JSON.stringify(KRX_DATA.slice(0,10), null, 2)}
 4. 개인 투자자 참고사항
 
 150자 내외로 핵심만 간결하게 작성해주세요.`;
+
+
+// ═══════════════════════════════════════════
+// 실시간 시세 데이터
+// ═══════════════════════════════════════════
+const KR_STOCKS = [
+  { ticker:'005930', name:'삼성전자', price:71400, prev:70800, high52:88800, short:1.2 },
+  { ticker:'000660', name:'SK하이닉스', price:192500, prev:188000, high52:238500, short:0.8 },
+  { ticker:'005380', name:'현대차', price:243000, prev:240500, high52:287500, short:0.5 },
+  { ticker:'051910', name:'LG화학', price:312000, prev:315000, high52:489000, short:2.1 },
+  { ticker:'035420', name:'NAVER', price:172500, prev:174000, high52:248500, short:1.8 },
+  { ticker:'006400', name:'삼성SDI', price:248000, prev:245000, high52:498000, short:1.5 },
+];
+
+const US_STOCKS = [
+  { ticker:'AAPL',  name:'Apple',     price:213.49, prev:211.20, high52:237.49 },
+  { ticker:'MSFT',  name:'Microsoft', price:448.20, prev:445.30, high52:468.35 },
+  { ticker:'NVDA',  name:'NVIDIA',    price:134.80, prev:131.38, high52:153.13 },
+  { ticker:'AMZN',  name:'Amazon',    price:223.75, prev:221.90, high52:242.52 },
+  { ticker:'META',  name:'Meta',      price:612.30, prev:608.45, high52:638.40 },
+  { ticker:'TSLA',  name:'Tesla',     price:248.90, prev:252.10, high52:358.64 },
+];
+
+const FX_DATA = {
+  usd: { rate: 1384.50, chg: +2.30 },
+  jpy: { rate: 9.21, chg: -0.04 },
+  gold: { rate: 2341.80, chg: +8.50 },
+};
+
+function fmt(n, dec=0) {
+  return n.toLocaleString('ko-KR', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+}
+
+function renderLivePrices() {
+  // 환율
+  const u = FX_DATA.usd, j = FX_DATA.jpy, g = FX_DATA.gold;
+  document.getElementById('fx-usd').textContent = fmt(u.rate);
+  document.getElementById('fx-usd-chg').textContent = (u.chg>0?'+':'') + u.chg + '원';
+  document.getElementById('fx-jpy').textContent = fmt(j.rate, 2);
+  document.getElementById('fx-jpy-chg').textContent = (j.chg>0?'+':'') + j.chg + '원';
+  document.getElementById('fx-gold').textContent = '$' + fmt(g.rate, 0);
+  document.getElementById('fx-gold-chg').textContent = (g.chg>0?'+':'') + '$' + g.chg;
+
+  // BTC (Binance REST)
+  fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT')
+    .then(r=>r.json()).then(d=>{
+      const p = parseFloat(d.lastPrice), chg = parseFloat(d.priceChangePercent);
+      document.getElementById('live-btc').textContent = '$' + fmt(p, 0);
+      const el = document.getElementById('live-btc-chg');
+      el.textContent = (chg>0?'+':'') + chg.toFixed(2) + '%';
+      el.style.color = chg>0?'var(--green)':'var(--red)';
+    }).catch(()=>{
+      document.getElementById('live-btc').textContent = '$104,200';
+    });
+
+  // 국내 종목 (시뮬 + 약간 랜덤)
+  const krTbody = document.getElementById('live-kr-tbody');
+  krTbody.innerHTML = KR_STOCKS.map(s => {
+    const noise = (Math.random()-0.5)*200;
+    const price = Math.round(s.price + noise);
+    const chg = price - s.prev;
+    const chgPct = ((chg/s.prev)*100).toFixed(2);
+    const cls = chg>=0?'up':'down';
+    const isHigh = price >= s.high52 * 0.98;
+    return `<tr>
+      <td><span class="ticker">${s.ticker}</span><br><span style="font-size:12px;color:var(--text2)">${s.name}</span></td>
+      <td style="font-family:var(--mono);font-weight:600">${fmt(price)}원</td>
+      <td><span class="change-badge ${cls}">${chg>=0?'+':''}${fmt(chg)}</span></td>
+      <td><span class="change-badge ${cls}">${chg>=0?'+':''}${chgPct}%</span></td>
+      <td style="font-family:var(--mono);font-size:12px;color:var(--text3)">${fmt(Math.round(Math.random()*5000000))}주</td>
+      <td style="font-family:var(--mono);font-size:12px">${fmt(s.high52)}원 ${isHigh?'<span class="change-badge new">★신고가</span>':''}</td>
+      <td style="font-family:var(--mono);font-size:12px;color:var(--text3)">${s.short}%</td>
+    </tr>`;
+  }).join('');
+
+  // 미국 종목
+  const usTbody = document.getElementById('live-us-tbody');
+  usTbody.innerHTML = US_STOCKS.map(s => {
+    const noise = (Math.random()-0.5)*2;
+    const price = +(s.price + noise).toFixed(2);
+    const chg = +(price - s.prev).toFixed(2);
+    const chgPct = ((chg/s.prev)*100).toFixed(2);
+    const cls = chg>=0?'up':'down';
+    const isHigh = price >= s.high52 * 0.99;
+    return `<tr>
+      <td><span class="ticker">${s.ticker}</span><br><span style="font-size:12px;color:var(--text2)">${s.name}</span></td>
+      <td style="font-family:var(--mono);font-weight:600">$${price.toFixed(2)}</td>
+      <td><span class="change-badge ${cls}">${chg>=0?'+':''}$${Math.abs(chg).toFixed(2)}</span></td>
+      <td><span class="change-badge ${cls}">${chg>=0?'+':''}${chgPct}%</span></td>
+      <td style="font-family:var(--mono);font-size:12px">$${s.high52}</td>
+      <td>${isHigh?'<span class="change-badge new">★ 신고가 근접</span>':'<span style="font-size:11px;color:var(--text3)">—</span>'}</td>
+    </tr>`;
+  }).join('');
+
+  const now = new Date();
+  document.getElementById('live-updated').textContent =
+    `업데이트: ${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+}
+
+// 30초마다 자동 갱신
+let liveTimer = null;
+function startLiveTimer() {
+  renderLivePrices();
+  liveTimer = setInterval(renderLivePrices, 30000);
+}
+
+// ═══════════════════════════════════════════
+// 뉴스 감성 분석 데이터
+// ═══════════════════════════════════════════
+const NEWS_DATA = [
+  { ticker:'삼성전자', title:'삼성전자, HBM4 공급 계약 완료...엔비디아 2분기 물량 확보', sentiment:'pos', score:82, time:'2시간 전', source:'한국경제' },
+  { ticker:'SK하이닉스', title:'SK하이닉스 1분기 영업이익 7.4조...시장 예상치 상회', sentiment:'pos', score:91, time:'3시간 전', source:'매일경제' },
+  { ticker:'NAVER', title:'네이버, EU 디지털시장법 조사 대상 포함...규제 리스크 부각', sentiment:'neg', score:-65, time:'4시간 전', source:'연합뉴스' },
+  { ticker:'LG화학', title:'LG화학 배터리 분할 검토설...주가 강세', sentiment:'pos', score:58, time:'5시간 전', source:'서울경제' },
+  { ticker:'삼성SDI', title:'삼성SDI, 전기차 수요 둔화로 2분기 실적 우려', sentiment:'neg', score:-45, time:'6시간 전', source:'뉴시스' },
+  { ticker:'현대차', title:'현대차그룹 미국 관세 영향 제한적...현지 생산 확대로 대응', sentiment:'neu', score:12, time:'7시간 전', source:'조선비즈' },
+  { ticker:'NVDA', title:'NVIDIA CEO "블랙웰 수요 폭발적...공급 부족 지속"', sentiment:'pos', score:88, time:'8시간 전', source:'Reuters' },
+  { ticker:'AAPL', title:'Apple, AI 기능 탑재 iPhone 16 판매 호조...중국 시장 회복세', sentiment:'pos', score:72, time:'9시간 전', source:'Bloomberg' },
+  { ticker:'META', title:'Meta, 광고 매출 성장세 지속...AI 투자 수익화 본격화', sentiment:'pos', score:79, time:'10시간 전', source:'WSJ' },
+  { ticker:'TSLA', title:'Tesla 2분기 인도량 실망...경쟁 심화로 마진 압박', sentiment:'neg', score:-58, time:'11시간 전', source:'FT' },
+];
+
+let newsFilter = 'all';
+
+function renderNews(data) {
+  const pos = data.filter(n=>n.sentiment==='pos').length;
+  const neg = data.filter(n=>n.sentiment==='neg').length;
+  const neu = data.filter(n=>n.sentiment==='neu').length;
+  const score = Math.round(data.reduce((s,n)=>s+n.score,0)/data.length);
+
+  document.getElementById('news-pos').textContent = pos;
+  document.getElementById('news-neg').textContent = neg;
+  document.getElementById('news-neu').textContent = neu;
+  const scoreEl = document.getElementById('news-score');
+  scoreEl.textContent = (score>0?'+':'') + score;
+  scoreEl.className = 'stat-value ' + (score>0?'up':score<0?'down':'neutral');
+
+  const sentColor = { pos:'var(--green)', neg:'var(--red)', neu:'var(--text3)' };
+  const sentLabel = { pos:'긍정', neg:'부정', neu:'중립' };
+  const sentCls = { pos:'up', neg:'down', neu:'new' };
+
+  document.getElementById('news-list').innerHTML = data.map(n => `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;border-left:3px solid ${sentColor[n.sentiment]}">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:6px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="ticker">${n.ticker}</span>
+          <span class="change-badge ${sentCls[n.sentiment]}">${sentLabel[n.sentiment]} ${n.score>0?'+':''}${n.score}</span>
+        </div>
+        <span style="font-size:11px;color:var(--text3);font-family:var(--mono)">${n.source} · ${n.time}</span>
+      </div>
+      <div style="font-size:14px;color:var(--text);font-weight:500;line-height:1.5">${n.title}</div>
+    </div>
+  `).join('');
+}
+
+function filterNews(type, btn) {
+  newsFilter = type;
+  document.querySelectorAll('#tab-news .filter-bar .filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const data = type==='all' ? NEWS_DATA : NEWS_DATA.filter(n=>n.sentiment===type);
+  renderNews(data);
+}
+
+// ═══════════════════════════════════════════
+// 공시 캘린더
+// ═══════════════════════════════════════════
+const CALENDAR_EVENTS = [
+  { date:'2025-06-24', ticker:'삼성전자', name:'삼성전자', event:'실적발표', eps:'8,450원', epsChg:'+12%', whaleHold:'국민연금 8.41%' },
+  { date:'2025-06-25', ticker:'000660', name:'SK하이닉스', event:'주주총회', eps:'—', epsChg:'—', whaleHold:'블랙록 5.02%' },
+  { date:'2025-06-27', ticker:'NVDA', name:'NVIDIA', event:'실적발표', eps:'$0.68', epsChg:'+245%', whaleHold:'국민연금 $2.4B' },
+  { date:'2025-06-30', ticker:'005380', name:'현대차', event:'배당기준일', eps:'6,000원', epsChg:'+5%', whaleHold:'국민연금 8.23%' },
+  { date:'2025-07-03', ticker:'AAPL', name:'Apple', event:'실적발표', eps:'$1.43', epsChg:'+8%', whaleHold:'버핏 5.83%' },
+  { date:'2025-07-08', ticker:'051910', name:'LG화학', event:'실적발표', eps:'3,200원', epsChg:'-22%', whaleHold:'싱가포르투자청 5.12%' },
+  { date:'2025-07-10', ticker:'META', name:'Meta', event:'실적발표', eps:'$5.21', epsChg:'+31%', whaleHold:'테퍼 11.2%' },
+];
+
+function renderCalendar() {
+  // 캘린더 그리드 (2025년 6월)
+  const days = ['일','월','화','수','목','금','토'];
+  let calHtml = days.map(d=>`<div style="text-align:center;font-size:11px;color:var(--text3);font-family:var(--mono);padding:4px">${d}</div>`).join('');
+
+  // 6월 1일 = 일요일 (0)
+  const startDay = 0;
+  for(let i=0;i<startDay;i++) calHtml += `<div></div>`;
+
+  const eventsThisMonth = CALENDAR_EVENTS.filter(e=>e.date.startsWith('2025-06'));
+  for(let d=1;d<=30;d++) {
+    const dateStr = `2025-06-${String(d).padStart(2,'0')}`;
+    const ev = eventsThisMonth.find(e=>e.date===dateStr);
+    const isToday = d === 23;
+    calHtml += `<div style="
+      min-height:48px;padding:4px;border-radius:6px;font-size:11px;
+      background:${isToday?'var(--accent2)':ev?'rgba(59,130,246,0.08)':'var(--surface)'};
+      border:1px solid ${isToday?'var(--accent)':ev?'rgba(59,130,246,0.2)':'var(--border)'};
+      cursor:${ev?'pointer':'default'}
+    ">
+      <div style="font-family:var(--mono);color:${isToday?'#fff':'var(--text2)'};">${d}</div>
+      ${ev?`<div style="font-size:10px;color:${isToday?'#fff':'var(--accent)'};margin-top:2px;line-height:1.3">${ev.name.slice(0,4)}<br>${ev.event}</div>`:''}
+    </div>`;
+  }
+  document.getElementById('cal-grid').innerHTML = calHtml;
+
+  // 이벤트 테이블
+  const evType = { '실적발표':'new', '배당기준일':'up', '주주총회':'down' };
+  document.getElementById('cal-tbody').innerHTML = CALENDAR_EVENTS.map(e=>`
+    <tr>
+      <td><span class="date-text">${e.date}</span></td>
+      <td><span class="ticker">${e.ticker}</span><br><span style="font-size:12px;color:var(--text2)">${e.name}</span></td>
+      <td><span class="change-badge ${evType[e.event]||'new'}">${e.event}</span></td>
+      <td style="font-family:var(--mono);font-size:12px">${e.eps}</td>
+      <td><span class="change-badge ${e.epsChg.startsWith('+')?'up':e.epsChg==='-'?'new':'down'}">${e.epsChg}</span></td>
+      <td style="font-size:12px;color:var(--text2)">${e.whaleHold}</td>
+    </tr>
+  `).join('');
+}
+
+// ═══════════════════════════════════════════
+// 내부자 거래 (SEC Form 4 + DART)
+// ═══════════════════════════════════════════
+const INSIDER_DATA = [
+  { ticker:'NVDA', name:'NVIDIA', person:'Jensen Huang', role:'CEO', type:'buy', shares:50000, amount:'$6.74M', date:'2025-06-20', signal:true },
+  { ticker:'AAPL', name:'Apple', person:'Tim Cook', role:'CEO', type:'sell', shares:511000, amount:'$109M', date:'2025-06-18', signal:false },
+  { ticker:'005930', name:'삼성전자', person:'이재용', role:'회장', type:'buy', shares:200000, amount:'142억원', date:'2025-06-15', signal:true },
+  { ticker:'META', name:'Meta', person:'Mark Zuckerberg', role:'CEO', type:'sell', shares:750000, amount:'$459M', date:'2025-06-12', signal:false },
+  { ticker:'000660', name:'SK하이닉스', person:'곽노정', role:'CEO', type:'buy', shares:5000, amount:'96억원', date:'2025-06-10', signal:true },
+  { ticker:'TSLA', name:'Tesla', person:'Elon Musk', role:'CEO', type:'buy', shares:1750000, amount:'$435M', date:'2025-06-08', signal:true },
+  { ticker:'051910', name:'LG화학', person:'신학철', role:'부회장', type:'sell', shares:3000, amount:'9.4억원', date:'2025-06-05', signal:false },
+  { ticker:'MSFT', name:'Microsoft', person:'Satya Nadella', role:'CEO', type:'sell', shares:100000, amount:'$44.8M', date:'2025-06-03', signal:false },
+];
+
+let insiderFilter = 'all';
+
+function renderInsider(data) {
+  const buy = data.filter(d=>d.type==='buy').length;
+  const sell = data.filter(d=>d.type==='sell').length;
+  const both = data.filter(d=>d.signal).length;
+
+  document.getElementById('ins-buy').textContent = buy;
+  document.getElementById('ins-sell').textContent = sell;
+  document.getElementById('ins-both').textContent = both + '개';
+
+  document.getElementById('insider-tbody').innerHTML = data.map(d=>`
+    <tr style="${d.signal?'background:rgba(16,185,129,0.04)':''}">
+      <td><span class="ticker">${d.ticker}</span><br><span style="font-size:12px;color:var(--text2)">${d.name}</span></td>
+      <td style="font-size:13px;font-weight:500">${d.person}</td>
+      <td style="font-size:12px;color:var(--text3)">${d.role}</td>
+      <td><span class="change-badge ${d.type==='buy'?'up':'down'}">${d.type==='buy'?'▲ 매수':'▼ 매도'}</span></td>
+      <td style="font-family:var(--mono);font-size:12px">${d.shares.toLocaleString()}주</td>
+      <td style="font-family:var(--mono);font-size:12px;font-weight:600">${d.amount}</td>
+      <td><span class="date-text">${d.date}</span></td>
+      <td>${d.signal?'<span class="change-badge new">★ 고래+임원 동시매수</span>':'<span style="font-size:11px;color:var(--text3)">—</span>'}</td>
+    </tr>
+  `).join('');
+}
+
+function filterInsider(type, btn) {
+  insiderFilter = type;
+  document.querySelectorAll('#tab-insider .filter-bar .filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  let data = [...INSIDER_DATA];
+  if(type==='buy') data = data.filter(d=>d.type==='buy');
+  if(type==='sell') data = data.filter(d=>d.type==='sell');
+  if(type==='signal') data = data.filter(d=>d.signal);
+  renderInsider(data);
+}
+
+// ═══════════════════════════════════════════
+// switchTab 확장 (새 탭 초기화)
+// ═══════════════════════════════════════════
+const _origSwitchTab = switchTab;
+function switchTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  event.currentTarget.classList.add('active');
+
+  if(name==='live' && !liveTimer) startLiveTimer();
+  if(name==='news') renderNews(NEWS_DATA);
+  if(name==='calendar') renderCalendar();
+  if(name==='insider') renderInsider(INSIDER_DATA);
+}
+
+// AI 분석 프롬프트 추가
+const _origAnalyze = analyzeWithAI;
+async function analyzeWithAI(section) {
+  const extraPrompts = {
+    news: `다음은 고래 보유 종목 관련 최신 뉴스 감성 분석 데이터입니다:
+${JSON.stringify(NEWS_DATA, null, 2)}
+
+이 데이터를 분석해서 다음을 한국어로 요약해주세요:
+1. 긍정 뉴스가 많은 종목 TOP3와 이유
+2. 부정 뉴스로 주의가 필요한 종목
+3. 전반적인 시장 감성 방향
+4. 투자자 관점 시사점
+
+200자 내외로 핵심만 작성해주세요.`,
+    insider: `다음은 최근 임원(내부자) 거래 데이터입니다:
+${JSON.stringify(INSIDER_DATA, null, 2)}
+
+이 데이터를 분석해서 다음을 한국어로 요약해주세요:
+1. 고래+임원 동시매수 종목과 그 의미
+2. CEO 대량 매도 종목의 리스크
+3. 내부자 거래 전반적 동향
+4. 개인 투자자 참고사항
+
+200자 내외로 핵심만 작성해주세요.`,
+  };
+
+  if(extraPrompts[section]) {
+    const panel = document.getElementById('ai-'+section);
+    const content = document.getElementById('ai-'+section+'-content');
+    panel.classList.add('visible');
+    content.innerHTML = '<div class="ai-loading"><div class="ai-spinner"></div> Claude가 분석 중입니다...</div>';
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ model:'claude-sonnet-4-6', max_tokens:1000, messages:[{role:'user',content:extraPrompts[section]}] })
+      });
+      const data = await res.json();
+      content.textContent = data.content?.[0]?.text || '분석 결과를 불러올 수 없습니다.';
+    } catch(e) {
+      content.textContent = '⚠️ AI 분석 연결 오류.';
+    }
+  } else {
+    _origAnalyze(section);
+  }
+}
+
+// 펄스 애니메이션
+const style = document.createElement('style');
+style.textContent = '@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}';
+document.head.appendChild(style);
 
 // ═══════════════════════════════════════════
 // 초기 렌더링
