@@ -579,8 +579,54 @@
   .treemap-cell:hover { opacity: 0.82; }
   .treemap-label { font-size: 11px; font-weight: 700; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.35); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
   .treemap-pct { font-size: 10px; color: rgba(255,255,255,0.82); }
+
+  /* ── 차트 모달 ── */
+  .period-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text3);
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: var(--sans);
+    transition: all 0.15s;
+  }
+  .period-btn:hover { color: var(--text); border-color: var(--border2); }
+  .period-btn.active { background: var(--accent2); border-color: var(--accent); color: #fff; }
+
+  .indicator-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text3);
+    font-size: 11px;
+    padding: 3px 9px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-family: var(--sans);
+    transition: all 0.15s;
+  }
+  .indicator-btn.active { background: rgba(59,130,246,0.1); border-color: var(--accent); color: var(--accent); }
+
+  .chart-link {
+    cursor: pointer;
+    color: var(--accent);
+    font-size: 11px;
+    text-decoration: underline;
+    font-family: var(--mono);
+  }
+  .chart-link:hover { color: var(--text); }
+
+  .ticker-btn {
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .ticker-btn:hover { opacity: 0.75; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@0.1.1/dist/chartjs-chart-financial.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/luxon@3.4.4/build/global/luxon.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.3.1/dist/chartjs-adapter-luxon.umd.min.js"></script>
 </head>
 <body>
 
@@ -1783,7 +1829,7 @@ function renderWhale(name, data) {
   document.getElementById('whale-tbody').innerHTML = `
     <tr style="background:var(--surface2)">
       <td colspan="6" style="padding:10px 14px;font-size:12px;color:var(--text3);font-family:var(--mono)">
-        🐋 <strong style="color:var(--text)">${name}</strong> 보유 기관·투자자 목록
+        🐋 <strong style="color:var(--text);cursor:pointer" onclick="openChartModal('${WHALE_STOCK_DATA[name]?.[0]?.ticker||name}')">${name}</strong> 보유 기관·투자자 목록
       </td>
     </tr>
     ${data.map(d => `
@@ -2363,8 +2409,8 @@ function renderLivePrices() {
     const cls = chg>=0?'up':'down';
     const isHigh = price >= s.high52 * 0.98;
     return `<tr>
-      <td><span class="ticker">${s.ticker}</span><br><span style="font-size:12px;color:var(--text2)">${s.name}</span></td>
-      <td style="font-family:var(--mono);font-weight:600">${fmt(price)}원</td>
+      <td><span class="ticker ticker-btn" onclick="openChartModal('${s.ticker}')">${s.ticker}</span><br><span style="font-size:12px;color:var(--text2)">${s.name}</span></td>
+      <td style="font-family:var(--mono);font-weight:600;cursor:pointer" onclick="openChartModal('${s.ticker}')">${fmt(price)}원</td>
       <td><span class="change-badge ${cls}">${chg>=0?'+':''}${fmt(chg)}</span></td>
       <td><span class="change-badge ${cls}">${chg>=0?'+':''}${chgPct}%</span></td>
       <td style="font-family:var(--mono);font-size:12px;color:var(--text3)">${fmt(Math.round(Math.random()*5000000))}주</td>
@@ -2383,8 +2429,8 @@ function renderLivePrices() {
     const cls = chg>=0?'up':'down';
     const isHigh = price >= s.high52 * 0.99;
     return `<tr>
-      <td><span class="ticker">${s.ticker}</span><br><span style="font-size:12px;color:var(--text2)">${s.name}</span></td>
-      <td style="font-family:var(--mono);font-weight:600">$${price.toFixed(2)}</td>
+      <td><span class="ticker ticker-btn" onclick="openChartModal('${s.ticker}')">${s.ticker}</span><br><span style="font-size:12px;color:var(--text2)">${s.name}</span></td>
+      <td style="font-family:var(--mono);font-weight:600;cursor:pointer" onclick="openChartModal('${s.ticker}')">$${price.toFixed(2)}</td>
       <td><span class="change-badge ${cls}">${chg>=0?'+':''}$${Math.abs(chg).toFixed(2)}</span></td>
       <td><span class="change-badge ${cls}">${chg>=0?'+':''}${chgPct}%</span></td>
       <td style="font-family:var(--mono);font-size:12px">$${s.high52}</td>
@@ -2697,8 +2743,8 @@ function renderValuation(data) {
     const cheap = d.per<10 && d.pbr<1;
     const hiDiv = d.div>=5;
     return `<tr>
-      <td><span class="ticker">${d.ticker}</span><br><span style="font-size:12px;color:var(--text2)">${d.name}</span></td>
-      <td style="font-family:var(--mono);font-weight:600">${d.price.toLocaleString()}원</td>
+      <td><span class="ticker ticker-btn" onclick="openChartModal('${d.ticker}')">${d.ticker}</span><br><span style="font-size:12px;color:var(--text2)">${d.name}</span></td>
+      <td style="font-family:var(--mono);font-weight:600;cursor:pointer" onclick="openChartModal('${d.ticker}')">${d.price.toLocaleString()}원</td>
       <td style="font-family:var(--mono);color:${d.per<15?'var(--green)':d.per>25?'var(--red)':'var(--text2)'}">${d.per}x</td>
       <td style="font-family:var(--mono);color:${d.pbr<1?'var(--green)':'var(--text2)'}">${d.pbr}x</td>
       <td style="font-family:var(--mono);color:${d.roe>10?'var(--green)':'var(--text2)'}">${d.roe}%</td>
@@ -2839,7 +2885,7 @@ function renderScores() {
 
   tb.innerHTML = scored.map(s=>`
     <tr style="${s.total>=80?'background:rgba(16,185,129,0.04)':''}">
-      <td><span class="ticker">${s.ticker}</span><br><span style="font-size:12px;color:var(--text2)">${s.name}</span></td>
+      <td><span class="ticker ticker-btn" onclick="openChartModal('${s.ticker}')">${s.ticker}</span><br><span style="font-size:12px;color:var(--text2)">${s.name}</span></td>
       <td><div style="display:flex;align-items:center;gap:8px"><div style="font-size:22px;font-weight:700;font-family:var(--mono);color:${sc(s.total)}">${s.total}</div><span class="change-badge ${scls(s.total)}">${sl(s.total)}</span></div></td>
       <td>${bar(s.whale,'#2563eb')}</td>
       <td>${bar(s.insider,'#7c3aed')}</td>
@@ -2898,6 +2944,485 @@ const _style = document.createElement('style');
 _style.textContent = '@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}';
 document.head.appendChild(_style);
 
+
+// ═══════════════════════════════════════════
+// 종목 차트 모달
+// ═══════════════════════════════════════════
+const STOCK_INFO = {
+  '005930': { name:'삼성전자', price:71400, chg:+600, chgPct:+0.85, open:70900, high:71800, low:70600, vol:'2,341만주', high52:88800, cap:'425조', per:13.2, div:2.8 },
+  '000660': { name:'SK하이닉스', price:192500, chg:+4500, chgPct:+2.39, open:188500, high:193200, low:188000, vol:'489만주', high52:238500, cap:'139조', per:9.8, div:0.8 },
+  '005380': { name:'현대차', price:243000, chg:+2500, chgPct:+1.04, open:241000, high:244500, low:240500, vol:'312만주', high52:287500, cap:'51조', per:5.2, div:5.1 },
+  '051910': { name:'LG화학', price:312000, chg:-3000, chgPct:-0.95, open:315500, high:316000, low:311000, vol:'78만주', high52:489000, cap:'22조', per:22.1, div:1.2 },
+  '035420': { name:'NAVER', price:172500, chg:-1500, chgPct:-0.86, open:174000, high:174200, low:172000, vol:'134만주', high52:248500, cap:'28조', per:28.4, div:0.4 },
+  '006400': { name:'삼성SDI', price:248000, chg:+3000, chgPct:+1.22, open:245500, high:249000, low:245000, vol:'67만주', high52:498000, cap:'17조', per:31.2, div:0.9 },
+  '105560': { name:'KB금융', price:89400, chg:+400, chgPct:+0.45, open:89100, high:89800, low:88900, vol:'198만주', high52:98500, cap:'36조', per:6.1, div:6.2 },
+  '055550': { name:'신한지주', price:54300, chg:+200, chgPct:+0.37, open:54100, high:54600, low:54000, vol:'167만주', high52:59800, cap:'27조', per:5.8, div:5.8 },
+  'AAPL':   { name:'Apple', price:213.49, chg:+2.29, chgPct:+1.08, open:211.80, high:214.20, low:211.50, vol:'58.3M', high52:237.49, cap:'$3.27T', per:32.1, div:0.5 },
+  'MSFT':   { name:'Microsoft', price:448.20, chg:+2.90, chgPct:+0.65, open:446.00, high:449.50, low:445.80, vol:'18.2M', high52:468.35, cap:'$3.33T', per:35.2, div:0.7 },
+  'NVDA':   { name:'NVIDIA', price:134.80, chg:+3.42, chgPct:+2.60, open:131.90, high:135.40, low:131.50, vol:'312M', high52:153.13, cap:'$3.30T', per:38.4, div:0.0 },
+  'AMZN':   { name:'Amazon', price:223.75, chg:+1.85, chgPct:+0.83, open:222.30, high:224.50, low:221.90, vol:'34.1M', high52:242.52, cap:'$2.37T', per:42.1, div:0.0 },
+  'META':   { name:'Meta', price:612.30, chg:+3.85, chgPct:+0.63, open:609.00, high:614.20, low:608.40, vol:'9.8M', high52:638.40, cap:'$1.55T', per:25.3, div:0.4 },
+  'TSLA':   { name:'Tesla', price:248.90, chg:-3.20, chgPct:-1.27, open:252.30, high:253.10, low:248.20, vol:'89.4M', high52:358.64, cap:'$799B', per:61.2, div:0.0 },
+};
+
+const WHALE_BADGES = {
+  '005930': ['국민연금 8.41%▲','블랙록 4.23%','뱅가드 3.91%'],
+  '000660': ['블랙록 5.02%▲','국민연금 6.72%▼','SK(주) 20.07%'],
+  '005380': ['국민연금 8.23%▲','뱅가드 6.89%▲','블랙록 3.12%▼'],
+  '051910': ['싱가포르투자청 5.12%★','국민연금 10.34%▲'],
+  '035420': ['국민연금 9.98%▼'],
+  'AAPL':   ['버핏 5.83%','뱅가드 8.91%▲','국민연금 0.21%▲'],
+  'NVDA':   ['테퍼 0.08%▲','소로스 0.04%★','국민연금 0.09%▲'],
+  'TSLA':   ['테퍼 0.12%▼','소로스 0.03%▼','국민연금 0.07%▼'],
+};
+
+let currentTicker = null;
+let currentPeriod = '1m';
+let currentChartType = 'candle';
+let activeIndicators = { ma: true, bb: false, volume: true, rsi: false, macd: false };
+let modalCharts = {};
+
+// 차트 데이터 생성 (시뮬레이션)
+function generateOHLC(basePrice, days, volatility=0.015) {
+  const data = [];
+  const labels = [];
+  let price = basePrice * (1 - days * volatility * 0.3);
+  const now = new Date();
+
+  for(let i = days; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    if(d.getDay() === 0 || d.getDay() === 6) continue;
+
+    const change = (Math.random() - 0.48) * volatility;
+    const open = price;
+    const close = price * (1 + change);
+    const high = Math.max(open, close) * (1 + Math.random() * 0.008);
+    const low = Math.min(open, close) * (1 - Math.random() * 0.008);
+    const vol = Math.round(Math.random() * 3000000 + 500000);
+
+    data.push({ o: Math.round(open), h: Math.round(high), l: Math.round(low), c: Math.round(close), v: vol });
+    labels.push(`${d.getMonth()+1}/${d.getDate()}`);
+    price = close;
+  }
+  return { data, labels };
+}
+
+function generateIntraday(basePrice) {
+  const data = [], labels = [];
+  let price = basePrice * 0.995;
+  for(let h = 9; h <= 15; h++) {
+    const maxMin = h === 15 ? 30 : 60;
+    for(let m = (h===9?0:0); m < maxMin; m += 5) {
+      const change = (Math.random()-0.48)*0.003;
+      price = price*(1+change);
+      data.push({o:Math.round(price*(1-0.001)),h:Math.round(price*(1+0.002)),l:Math.round(price*(1-0.002)),c:Math.round(price),v:Math.round(Math.random()*200000+50000)});
+      labels.push(`${h}:${String(m).padStart(2,'0')}`);
+    }
+  }
+  return { data, labels };
+}
+
+function calcMA(data, period) {
+  return data.map((_, i) => {
+    if(i < period-1) return null;
+    return Math.round(data.slice(i-period+1,i+1).reduce((s,d)=>s+d.c,0)/period);
+  });
+}
+
+function calcBB(data, period=20) {
+  return data.map((_, i) => {
+    if(i < period-1) return {upper:null,mid:null,lower:null};
+    const slice = data.slice(i-period+1,i+1).map(d=>d.c);
+    const avg = slice.reduce((s,v)=>s+v,0)/period;
+    const std = Math.sqrt(slice.reduce((s,v)=>s+(v-avg)**2,0)/period);
+    return {upper:Math.round(avg+2*std),mid:Math.round(avg),lower:Math.round(avg-2*std)};
+  });
+}
+
+function calcRSI(data, period=14) {
+  const rsi = Array(data.length).fill(null);
+  for(let i=period; i<data.length; i++) {
+    const changes = data.slice(i-period,i).map((d,j,a)=>j>0?d.c-a[j-1].c:0).slice(1);
+    const gains = changes.filter(c=>c>0).reduce((s,c)=>s+c,0)/period;
+    const losses = Math.abs(changes.filter(c=>c<0).reduce((s,c)=>s+c,0))/period;
+    rsi[i] = losses===0 ? 100 : Math.round(100 - 100/(1+gains/losses));
+  }
+  return rsi;
+}
+
+function calcMACD(data) {
+  const ema = (d, p) => {
+    const k = 2/(p+1);
+    return d.reduce((r,v,i)=>{r.push(i===0?v:v*k+r[i-1]*(1-k));return r;},[]);
+  };
+  const closes = data.map(d=>d.c);
+  const ema12 = ema(closes,12), ema26 = ema(closes,26);
+  const macd = ema12.map((v,i)=>v-ema26[i]);
+  const signal = ema(macd,9);
+  const hist = macd.map((v,i)=>v-signal[i]);
+  return {macd,signal,hist};
+}
+
+function openChartModal(ticker) {
+  currentTicker = ticker;
+  const modal = document.getElementById('chart-modal');
+  modal.style.display = 'block';
+  document.body.style.overflow = 'hidden';
+  renderModalChart();
+}
+
+function closeChartModal(e) {
+  if(e && e.target !== document.getElementById('chart-modal')) return;
+  document.getElementById('chart-modal').style.display = 'none';
+  document.body.style.overflow = '';
+  Object.values(modalCharts).forEach(c=>c&&c.destroy());
+  modalCharts = {};
+}
+
+function changePeriod(p, btn) {
+  currentPeriod = p;
+  document.querySelectorAll('#period-btns .period-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  Object.values(modalCharts).forEach(c=>c&&c.destroy());
+  modalCharts = {};
+  renderModalChart();
+}
+
+function changeChartType(t, btn) {
+  currentChartType = t;
+  document.querySelectorAll('#type-btns .period-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  Object.values(modalCharts).forEach(c=>c&&c.destroy());
+  modalCharts = {};
+  renderModalChart();
+}
+
+function toggleIndicator(ind, btn) {
+  activeIndicators[ind] = !activeIndicators[ind];
+  btn.classList.toggle('active', activeIndicators[ind]);
+  if(ind==='volume') document.getElementById('volume-chart-wrap').style.display = activeIndicators[ind]?'block':'none';
+  if(ind==='rsi') document.getElementById('rsi-chart-wrap').style.display = activeIndicators[ind]?'block':'none';
+  if(ind==='macd') document.getElementById('macd-chart-wrap').style.display = activeIndicators[ind]?'block':'none';
+  Object.values(modalCharts).forEach(c=>c&&c.destroy());
+  modalCharts = {};
+  renderModalChart();
+}
+
+function renderModalChart() {
+  const info = STOCK_INFO[currentTicker] || {};
+  const isUS = isNaN(currentTicker[0]);
+  const fmt = v => isUS ? '$'+parseFloat(v).toFixed(2) : Math.round(v).toLocaleString()+'원';
+
+  // 헤더
+  document.getElementById('modal-ticker').textContent = currentTicker;
+  document.getElementById('modal-name').textContent = info.name||currentTicker;
+  document.getElementById('modal-price').textContent = fmt(info.price||0);
+  const chgEl = document.getElementById('modal-chg');
+  const chgPct = info.chgPct||0;
+  chgEl.textContent = `${chgPct>=0?'+':''}${chgPct.toFixed(2)}%`;
+  chgEl.className = `change-badge ${chgPct>=0?'up':'down'}`;
+
+  // 정보 바
+  document.getElementById('info-open').textContent = fmt(info.open||0);
+  document.getElementById('info-high').textContent = fmt(info.high||0);
+  document.getElementById('info-low').textContent = fmt(info.low||0);
+  document.getElementById('info-vol').textContent = info.vol||'—';
+  document.getElementById('info-high52').textContent = fmt(info.high52||0);
+  document.getElementById('info-cap').textContent = info.cap||'—';
+  document.getElementById('info-per').textContent = (info.per||0)+'x';
+  document.getElementById('info-div').textContent = (info.div||0)+'%';
+
+  // 고래 뱃지
+  const badges = WHALE_BADGES[currentTicker]||[];
+  document.getElementById('modal-whale-badges').innerHTML = badges.map(b=>{
+    const cls = b.includes('▲')?'up':b.includes('▼')?'down':b.includes('★')?'new':'';
+    return `<span class="change-badge ${cls}" style="font-size:11px">${b}</span>`;
+  }).join('');
+
+  // 데이터 생성
+  const dayMap = {'1d':1,'1w':7,'1m':30,'3m':90,'1y':252};
+  const days = dayMap[currentPeriod]||30;
+  const basePrice = info.price||50000;
+  const {data:ohlc, labels} = currentPeriod==='1d'
+    ? generateIntraday(basePrice)
+    : generateOHLC(basePrice, days);
+
+  const closes = ohlc.map(d=>d.c);
+  const ma5   = calcMA(ohlc,5);
+  const ma20  = calcMA(ohlc,20);
+  const ma60  = calcMA(ohlc,60);
+  const bb    = calcBB(ohlc);
+  const rsi   = calcRSI(ohlc);
+  const macdData = calcMACD(ohlc);
+
+  const upColor   = '#10b981';
+  const downColor = '#ef4444';
+  const gridColor = '#e2e8f0';
+
+  // ── 메인 차트 ──
+  if(modalCharts.main) { modalCharts.main.destroy(); modalCharts.main = null; }
+  const mainCtx = document.getElementById('modal-main-chart').getContext('2d');
+
+  // financial 플러그인 있는지 체크
+  const hasFinancial = typeof Chart !== 'undefined' && Chart.registry &&
+    (Chart.registry.controllers.get('candlestick') || Chart.registry.controllers.get('ohlc'));
+
+  if(currentChartType === 'candle' && hasFinancial) {
+    // 진짜 캔들스틱
+    const candleData = ohlc.map((d,i) => ({
+      x: i,
+      o: d.o, h: d.h, l: d.l, c: d.c
+    }));
+
+    const datasets = [{
+      label: '캔들',
+      type: 'candlestick',
+      data: candleData,
+      color: {
+        up: upColor,
+        down: downColor,
+        unchanged: '#94a3b8',
+      },
+      borderColor: {
+        up: upColor,
+        down: downColor,
+        unchanged: '#94a3b8',
+      }
+    }];
+
+    if(activeIndicators.ma) {
+      if(ohlc.length>=5)  datasets.push({label:'MA5', type:'line',data:ma5.map((v,i)=>({x:i,y:v})),borderColor:'#f59e0b',borderWidth:1.5,pointRadius:0,tension:0.3});
+      if(ohlc.length>=20) datasets.push({label:'MA20',type:'line',data:ma20.map((v,i)=>({x:i,y:v})),borderColor:'#8b5cf6',borderWidth:1.5,pointRadius:0,tension:0.3});
+      if(ohlc.length>=60) datasets.push({label:'MA60',type:'line',data:ma60.map((v,i)=>({x:i,y:v})),borderColor:'#ef4444',borderWidth:1.5,pointRadius:0,tension:0.3});
+    }
+    if(activeIndicators.bb && ohlc.length>=20) {
+      datasets.push({label:'BB상단',type:'line',data:bb.map((b,i)=>({x:i,y:b.upper})),borderColor:'rgba(59,130,246,0.5)',borderWidth:1,pointRadius:0,borderDash:[4,4]});
+      datasets.push({label:'BB중간',type:'line',data:bb.map((b,i)=>({x:i,y:b.mid})),borderColor:'rgba(59,130,246,0.7)',borderWidth:1,pointRadius:0});
+      datasets.push({label:'BB하단',type:'line',data:bb.map((b,i)=>({x:i,y:b.lower})),borderColor:'rgba(59,130,246,0.5)',borderWidth:1,pointRadius:0,borderDash:[4,4]});
+    }
+
+    modalCharts.main = new Chart(mainCtx, {
+      type: 'candlestick',
+      data: { labels, datasets },
+      options: {
+        responsive:true, maintainAspectRatio:false,
+        interaction:{mode:'index',intersect:false},
+        plugins:{legend:{position:'top',labels:{boxWidth:8,padding:8,font:{size:11}}}},
+        scales:{
+          x:{grid:{display:false},ticks:{maxTicksLimit:8,font:{size:10}}},
+          y:{position:'right',grid:{color:gridColor},ticks:{callback:v=>isUS?'$'+v.toFixed(0):v.toLocaleString(),font:{size:10}}}
+        }
+      }
+    });
+
+  } else {
+    // SVG 캔들 직접 그리기 (financial 플러그인 없을 때)
+    const canvas = document.getElementById('modal-main-chart');
+    const ctx = mainCtx;
+    const W = canvas.offsetWidth || 860;
+    const H = canvas.offsetHeight || 320;
+    canvas.width = W * (window.devicePixelRatio||1);
+    canvas.height = H * (window.devicePixelRatio||1);
+    ctx.scale(window.devicePixelRatio||1, window.devicePixelRatio||1);
+
+    // 가격 범위
+    const allH = ohlc.map(d=>d.h), allL = ohlc.map(d=>d.l);
+    const maxP = Math.max(...allH) * 1.01;
+    const minP = Math.min(...allL) * 0.99;
+    const padL=8, padR=60, padT=20, padB=30;
+    const cW = W-padL-padR, cH = H-padT-padB;
+    const n = ohlc.length;
+    const barW = Math.max(2, Math.floor(cW/n*0.6));
+
+    const toY = p => padT + cH - ((p-minP)/(maxP-minP))*cH;
+    const toX = i => padL + (i+0.5)*(cW/n);
+
+    ctx.clearRect(0,0,W,H);
+
+    // 그리드
+    ctx.strokeStyle = gridColor; ctx.lineWidth = 0.5;
+    for(let i=0;i<=5;i++) {
+      const y = padT + (cH/5)*i;
+      ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(W-padR,y); ctx.stroke();
+      const price = maxP - (maxP-minP)*(i/5);
+      ctx.fillStyle='#94a3b8'; ctx.font='9px monospace'; ctx.textAlign='left';
+      ctx.fillText(isUS?'$'+price.toFixed(1):Math.round(price).toLocaleString(), W-padR+4, y+3);
+    }
+
+    // X축 레이블
+    ctx.fillStyle='#94a3b8'; ctx.font='9px sans-serif'; ctx.textAlign='center';
+    const step = Math.max(1,Math.floor(n/8));
+    for(let i=0;i<n;i+=step) {
+      ctx.fillText(labels[i]||'', toX(i), H-8);
+    }
+
+    // 볼린저밴드
+    if(activeIndicators.bb && ohlc.length>=20) {
+      ['upper','lower'].forEach(k=>{
+        ctx.beginPath(); ctx.strokeStyle='rgba(59,130,246,0.4)'; ctx.lineWidth=1;
+        ctx.setLineDash([4,4]);
+        bb.forEach((b,i)=>{ if(b[k]) i===0?ctx.moveTo(toX(i),toY(b[k])):ctx.lineTo(toX(i),toY(b[k])); });
+        ctx.stroke(); ctx.setLineDash([]);
+      });
+    }
+
+    // 이동평균
+    if(activeIndicators.ma) {
+      [[ma5,'#f59e0b'],[ma20,'#8b5cf6'],[ma60,'#ef4444']].forEach(([ma,color])=>{
+        if(!ma.some(v=>v!==null)) return;
+        ctx.beginPath(); ctx.strokeStyle=color; ctx.lineWidth=1.5; ctx.setLineDash([]);
+        let first=true;
+        ma.forEach((v,i)=>{ if(v===null) return; first?(ctx.moveTo(toX(i),toY(v)),first=false):ctx.lineTo(toX(i),toY(v)); });
+        ctx.stroke();
+      });
+    }
+
+    // 캔들
+    ohlc.forEach((d,i) => {
+      const x = toX(i);
+      const isUp = d.c >= d.o;
+      const color = isUp ? upColor : downColor;
+
+      // 심지 (위아래)
+      ctx.beginPath(); ctx.strokeStyle=color; ctx.lineWidth=1;
+      ctx.moveTo(x, toY(d.h)); ctx.lineTo(x, toY(d.l)); ctx.stroke();
+
+      // 몸통
+      const y1 = toY(Math.max(d.o,d.c));
+      const y2 = toY(Math.min(d.o,d.c));
+      const bodyH = Math.max(1, y2-y1);
+      ctx.fillStyle = isUp ? upColor : downColor;
+      ctx.fillRect(x-barW/2, y1, barW, bodyH);
+    });
+
+    // 라인/영역 차트
+    if(currentChartType !== 'candle') {
+      ctx.clearRect(0,0,W,H);
+      // 그리드 다시
+      ctx.strokeStyle=gridColor; ctx.lineWidth=0.5;
+      for(let i=0;i<=5;i++){const y=padT+(cH/5)*i;ctx.beginPath();ctx.moveTo(padL,y);ctx.lineTo(W-padR,y);ctx.stroke();}
+
+      if(currentChartType==='area') {
+        ctx.beginPath(); ctx.fillStyle='rgba(37,99,235,0.08)';
+        ctx.moveTo(toX(0),toY(ohlc[0].c));
+        closes.forEach((_,i)=>ctx.lineTo(toX(i),toY(ohlc[i].c)));
+        ctx.lineTo(toX(n-1),padT+cH); ctx.lineTo(toX(0),padT+cH); ctx.closePath(); ctx.fill();
+      }
+      ctx.beginPath(); ctx.strokeStyle='#2563eb'; ctx.lineWidth=2; ctx.setLineDash([]);
+      closes.forEach((_,i)=>i===0?ctx.moveTo(toX(i),toY(ohlc[i].c)):ctx.lineTo(toX(i),toY(ohlc[i].c)));
+      ctx.stroke();
+
+      if(activeIndicators.ma) {
+        [[ma5,'#f59e0b'],[ma20,'#8b5cf6'],[ma60,'#ef4444']].forEach(([ma,color])=>{
+          if(!ma.some(v=>v!==null)) return;
+          ctx.beginPath(); ctx.strokeStyle=color; ctx.lineWidth=1.5;
+          let first=true;
+          ma.forEach((v,i)=>{if(v===null)return;first?(ctx.moveTo(toX(i),toY(v)),first=false):ctx.lineTo(toX(i),toY(v));});
+          ctx.stroke();
+        });
+      }
+    }
+
+    // canvas 모드이므로 Chart 인스턴스 없음 - 더미 객체 저장
+    modalCharts.main = { destroy: ()=>{} };
+  }
+
+  // ── 거래량 차트 ──
+  if(activeIndicators.volume) {
+    if(modalCharts.vol) { modalCharts.vol.destroy(); modalCharts.vol=null; }
+    const volCanvas = document.getElementById('modal-volume-chart');
+    const volCtx = volCanvas.getContext('2d');
+    modalCharts.vol = new Chart(volCtx, {
+      type:'bar',
+      data:{
+        labels,
+        datasets:[{
+          label:'거래량',
+          data:ohlc.map(d=>d.v),
+          backgroundColor:ohlc.map(d=>d.c>=d.o?'rgba(16,185,129,0.65)':'rgba(239,68,68,0.65)'),
+          borderRadius:1, borderSkipped:false
+        }]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        scales:{
+          x:{display:false},
+          y:{position:'right',grid:{color:gridColor},
+            ticks:{callback:v=>{
+              if(v>=10000000) return Math.round(v/10000)+'만';
+              if(v>=1000000) return (v/1000000).toFixed(1)+'M';
+              return v.toLocaleString();
+            },font:{size:9},maxTicksLimit:3}
+          }
+        }
+      }
+    });
+  }
+
+  // ── RSI 차트 ──
+  if(activeIndicators.rsi) {
+    if(modalCharts.rsi) { modalCharts.rsi.destroy(); modalCharts.rsi=null; }
+    modalCharts.rsi = new Chart(document.getElementById('modal-rsi-chart').getContext('2d'), {
+      type:'line',
+      data:{
+        labels,
+        datasets:[
+          {label:'RSI', data:rsi, borderColor:'#8b5cf6', borderWidth:1.5, pointRadius:0, tension:0.3},
+          {label:'70', data:Array(ohlc.length).fill(70), borderColor:'rgba(239,68,68,0.4)', borderWidth:1, pointRadius:0, borderDash:[4,4]},
+          {label:'30', data:Array(ohlc.length).fill(30), borderColor:'rgba(16,185,129,0.4)', borderWidth:1, pointRadius:0, borderDash:[4,4]},
+        ]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        scales:{
+          x:{display:false},
+          y:{position:'right', min:0, max:100, grid:{color:gridColor},
+            ticks:{callback:v=>[0,30,70,100].includes(v)?v:'', font:{size:9}}}
+        }
+      }
+    });
+  }
+
+  // ── MACD 차트 ──
+  if(activeIndicators.macd) {
+    if(modalCharts.macd) { modalCharts.macd.destroy(); modalCharts.macd=null; }
+    modalCharts.macd = new Chart(document.getElementById('modal-macd-chart').getContext('2d'), {
+      type:'bar',
+      data:{
+        labels,
+        datasets:[
+          {label:'MACD',  type:'line', data:macdData.macd,   borderColor:'#2563eb', borderWidth:1.5, pointRadius:0, tension:0.3},
+          {label:'시그널', type:'line', data:macdData.signal, borderColor:'#ef4444', borderWidth:1.5, pointRadius:0, tension:0.3},
+          {label:'히스토그램', data:macdData.hist,
+            backgroundColor:macdData.hist.map(v=>v>=0?'rgba(16,185,129,0.65)':'rgba(239,68,68,0.65)'),
+            borderRadius:1},
+        ]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        scales:{
+          x:{display:false},
+          y:{position:'right', grid:{color:gridColor}, ticks:{font:{size:9}}}
+        }
+      }
+    });
+  }
+}
+
+// ESC 키로 모달 닫기
+document.addEventListener('keydown', e => {
+  if(e.key==='Escape') {
+    document.getElementById('chart-modal').style.display='none';
+    document.body.style.overflow='';
+    Object.values(modalCharts).forEach(c=>c&&c.destroy());
+    modalCharts={};
+  }
+});
+
 // ═══════════════════════════════════════════
 // 초기 렌더링
 // ═══════════════════════════════════════════
@@ -2912,5 +3437,117 @@ loadKrxData();
 renderWatchList();
 renderWatchList();
 </script>
+
+<!-- ═══════════════════════════════════════════
+     종목 차트 모달
+═══════════════════════════════════════════ -->
+<div id="chart-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:1000;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px)" onclick="closeChartModal(event)">
+  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:min(92vw,900px);background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,0.3)">
+
+    <!-- 모달 헤더 -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);background:var(--surface2)">
+      <div style="display:flex;align-items:center;gap:12px">
+        <span class="ticker" id="modal-ticker" style="font-size:14px">—</span>
+        <span id="modal-name" style="font-size:15px;font-weight:600;color:var(--text)">—</span>
+        <span id="modal-price" style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--text)">—</span>
+        <span id="modal-chg" class="change-badge up">—</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <!-- 기간 선택 -->
+        <div style="display:flex;gap:4px" id="period-btns">
+          <button class="period-btn active" onclick="changePeriod('1d',this)">1일</button>
+          <button class="period-btn" onclick="changePeriod('1w',this)">1주</button>
+          <button class="period-btn" onclick="changePeriod('1m',this)">1개월</button>
+          <button class="period-btn" onclick="changePeriod('3m',this)">3개월</button>
+          <button class="period-btn" onclick="changePeriod('1y',this)">1년</button>
+        </div>
+        <!-- 차트 유형 -->
+        <div style="display:flex;gap:4px" id="type-btns">
+          <button class="period-btn active" onclick="changeChartType('candle',this)">캔들</button>
+          <button class="period-btn" onclick="changeChartType('line',this)">라인</button>
+          <button class="period-btn" onclick="changeChartType('area',this)">영역</button>
+        </div>
+        <button onclick="closeChartModal()" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:20px;padding:0 4px;line-height:1">✕</button>
+      </div>
+    </div>
+
+    <!-- 차트 영역 -->
+    <div style="padding:16px 20px">
+      <!-- 보조 지표 선택 -->
+      <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+        <span style="font-size:11px;color:var(--text3);line-height:24px;font-family:var(--mono)">보조지표:</span>
+        <button class="indicator-btn active" onclick="toggleIndicator('ma',this)">이동평균</button>
+        <button class="indicator-btn" onclick="toggleIndicator('bb',this)">볼린저밴드</button>
+        <button class="indicator-btn" onclick="toggleIndicator('volume',this)">거래량</button>
+        <button class="indicator-btn" onclick="toggleIndicator('rsi',this)">RSI</button>
+        <button class="indicator-btn" onclick="toggleIndicator('macd',this)">MACD</button>
+      </div>
+
+      <!-- 메인 차트 -->
+      <div style="height:320px;position:relative">
+        <canvas id="modal-main-chart"></canvas>
+      </div>
+
+      <!-- 거래량 차트 -->
+      <div id="volume-chart-wrap" style="height:80px;margin-top:8px">
+        <canvas id="modal-volume-chart"></canvas>
+      </div>
+
+      <!-- RSI 차트 -->
+      <div id="rsi-chart-wrap" style="height:80px;margin-top:8px;display:none">
+        <canvas id="modal-rsi-chart"></canvas>
+      </div>
+
+      <!-- MACD 차트 -->
+      <div id="macd-chart-wrap" style="height:80px;margin-top:8px;display:none">
+        <canvas id="modal-macd-chart"></canvas>
+      </div>
+    </div>
+
+    <!-- 종목 정보 하단 -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:1px;background:var(--border);border-top:1px solid var(--border)">
+      <div style="background:var(--surface);padding:10px 14px;text-align:center">
+        <div style="font-size:10px;color:var(--text3);font-family:var(--mono);margin-bottom:3px">시가</div>
+        <div style="font-size:13px;font-family:var(--mono);font-weight:600" id="info-open">—</div>
+      </div>
+      <div style="background:var(--surface);padding:10px 14px;text-align:center">
+        <div style="font-size:10px;color:var(--text3);font-family:var(--mono);margin-bottom:3px">고가</div>
+        <div style="font-size:13px;font-family:var(--mono);font-weight:600;color:var(--green)" id="info-high">—</div>
+      </div>
+      <div style="background:var(--surface);padding:10px 14px;text-align:center">
+        <div style="font-size:10px;color:var(--text3);font-family:var(--mono);margin-bottom:3px">저가</div>
+        <div style="font-size:13px;font-family:var(--mono);font-weight:600;color:var(--red)" id="info-low">—</div>
+      </div>
+      <div style="background:var(--surface);padding:10px 14px;text-align:center">
+        <div style="font-size:10px;color:var(--text3);font-family:var(--mono);margin-bottom:3px">거래량</div>
+        <div style="font-size:13px;font-family:var(--mono);font-weight:600" id="info-vol">—</div>
+      </div>
+      <div style="background:var(--surface);padding:10px 14px;text-align:center">
+        <div style="font-size:10px;color:var(--text3);font-family:var(--mono);margin-bottom:3px">52주 고가</div>
+        <div style="font-size:13px;font-family:var(--mono);font-weight:600" id="info-high52">—</div>
+      </div>
+      <div style="background:var(--surface);padding:10px 14px;text-align:center">
+        <div style="font-size:10px;color:var(--text3);font-family:var(--mono);margin-bottom:3px">시가총액</div>
+        <div style="font-size:13px;font-family:var(--mono);font-weight:600" id="info-cap">—</div>
+      </div>
+      <div style="background:var(--surface);padding:10px 14px;text-align:center">
+        <div style="font-size:10px;color:var(--text3);font-family:var(--mono);margin-bottom:3px">PER</div>
+        <div style="font-size:13px;font-family:var(--mono);font-weight:600" id="info-per">—</div>
+      </div>
+      <div style="background:var(--surface);padding:10px 14px;text-align:center">
+        <div style="font-size:10px;color:var(--text3);font-family:var(--mono);margin-bottom:3px">배당률</div>
+        <div style="font-size:13px;font-family:var(--mono);font-weight:600" id="info-div">—</div>
+      </div>
+    </div>
+
+    <!-- 고래 현황 바 -->
+    <div style="padding:12px 20px;border-top:1px solid var(--border);background:var(--surface2);display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+      <span style="font-size:11px;color:var(--text3);font-family:var(--mono)">🐋 고래 현황</span>
+      <div id="modal-whale-badges" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+    </div>
+
+  </div>
+</div>
+
 </body>
 </html>
