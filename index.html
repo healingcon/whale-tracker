@@ -1946,28 +1946,7 @@ const WHALE_STOCK_DATA = {
   ],
 };
 
-// ═══════════════════════════════════════════
-// 탭 전환 (통합)
-// ═══════════════════════════════════════════
-function switchTab(name) {
-  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  const panel = document.getElementById('tab-' + name);
-  if(panel) panel.classList.add('active');
-  if(event && event.currentTarget) event.currentTarget.classList.add('active');
-
-  if(name==='live' && !liveTimer) startLiveTimer();
-  if(name==='nps') { renderNpsKr(); renderNpsCharts(); }
-  if(name==='news') renderNews(NEWS_DATA);
-  if(name==='calendar') renderCalendar();
-  if(name==='insider') renderInsider(INSIDER_DATA);
-  if(name==='supply') renderSupply();
-  if(name==='valuation') { renderValuation(VALUATION_DATA); }
-  if(name==='macro') setTimeout(renderMacro, 50);
-  if(name==='score') { renderScores(); renderWatchList(); }
-  if(name==='signal' && signalResults.length===0) runSignalAnalysis();
-  if(name==='today') { document.getElementById('today-empty').style.display='block'; }
-}
+// switchTab — 아래 통합 버전 사용
 
 function switchNps(market, btn) {
   document.getElementById('nps-kr').style.display = market === 'kr' ? 'block' : 'none';
@@ -4431,6 +4410,60 @@ ${worst ? `${worst.name}은 ${worst.reasons.filter(r=>r.includes('⚠️')).slic
   btn.disabled = false;
 }
 
+// ── 드롭다운 토글 ──
+function toggleGroup(id, btn) {
+  const items = document.getElementById(id);
+  if(!items) return;
+  const isOpen = items.classList.contains('open');
+
+  // 모두 닫기
+  document.querySelectorAll('.nav-group-items').forEach(el => el.classList.remove('open'));
+  document.querySelectorAll('.nav-group-btn').forEach(el => el.classList.remove('open'));
+
+  // 클릭한 것만 열기 (이미 열려있으면 닫기)
+  if(!isOpen) {
+    items.classList.add('open');
+    btn.classList.add('open');
+  }
+}
+
+// 외부 클릭시 닫기
+document.addEventListener('click', function(e) {
+  if(!e.target.closest('.nav-group')) {
+    document.querySelectorAll('.nav-group-items').forEach(el => el.classList.remove('open'));
+    document.querySelectorAll('.nav-group-btn').forEach(el => el.classList.remove('open'));
+  }
+});
+
+// ── 탭 전환 ──
+function switchTab(name, btnEl) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-group-items .tab-btn').forEach(b => b.classList.remove('active'));
+
+  const panel = document.getElementById('tab-' + name);
+  if(panel) panel.classList.add('active');
+  if(btnEl) btnEl.classList.add('active');
+
+  // 드롭다운 닫기
+  document.querySelectorAll('.nav-group-items').forEach(el => el.classList.remove('open'));
+  document.querySelectorAll('.nav-group-btn').forEach(el => el.classList.remove('open'));
+
+  // 탭별 초기화
+  if(name==='live' && !liveTimer) startLiveTimer();
+  if(name==='nps') { renderNpsKr(); renderNpsCharts(); }
+  if(name==='news') renderNews(NEWS_DATA);
+  if(name==='calendar') renderCalendar();
+  if(name==='insider') renderInsider(INSIDER_DATA);
+  if(name==='supply') renderSupply();
+  if(name==='valuation') renderValuation(VALUATION_DATA);
+  if(name==='macro') setTimeout(renderMacro, 50);
+  if(name==='score') { renderScores(); renderWatchList(); }
+  if(name==='signal' && signalResults.length===0) runSignalAnalysis();
+  if(name==='today') {
+    const el = document.getElementById('today-empty');
+    if(el) el.style.display = 'block';
+  }
+}
 // ═══════════════════════════════════════════
 // 초기 렌더링
 // ═══════════════════════════════════════════
