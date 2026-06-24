@@ -90,44 +90,107 @@
   }
 
   /* ── Nav Tabs ── */
+
+  /* ── 그룹 네비게이션 ── */
   .nav-tabs {
     display: flex;
-    gap: 2px;
-    padding: 16px 24px 0;
+    gap: 6px;
+    padding: 12px 24px;
     border-bottom: 1px solid var(--border);
-    overflow-x: auto;
-    scrollbar-width: none;
+    background: var(--surface);
+    flex-wrap: wrap;
+    align-items: flex-start;
   }
-  .nav-tabs::-webkit-scrollbar { display: none; }
 
-  .tab-btn {
-    background: none;
-    border: none;
-    color: var(--text3);
+  .nav-group {
+    position: relative;
+  }
+
+  .nav-group-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text2);
     font-family: var(--sans);
     font-size: 13px;
     font-weight: 500;
-    padding: 8px 16px 12px;
+    padding: 7px 12px;
+    border-radius: 8px;
     cursor: pointer;
     white-space: nowrap;
-    border-bottom: 2px solid transparent;
     transition: all 0.15s;
-    display: flex;
-    align-items: center;
-    gap: 6px;
+    height: 36px;
   }
 
-  .tab-btn:hover { color: var(--text2); }
-
-  .tab-btn.active {
+  .nav-group-btn:hover {
+    border-color: var(--border2);
     color: var(--text);
-    border-bottom-color: var(--accent);
+  }
+
+  .nav-group-btn.open {
+    background: var(--accent2);
+    border-color: var(--accent);
+    color: #fff;
+  }
+
+  .nav-arrow { font-size: 10px; transition: transform 0.2s; }
+  .nav-group-btn.open .nav-arrow { transform: rotate(180deg); }
+
+  .nav-group-items {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 6px;
+    z-index: 200;
+    min-width: 180px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .nav-group-items.open {
+    display: flex;
+  }
+
+  .nav-group-items .tab-btn {
+    border-radius: 6px;
+    padding: 8px 12px;
+    text-align: left;
+    border: none;
+    font-size: 13px;
+    color: var(--text2);
+    white-space: nowrap;
+    width: 100%;
+  }
+
+  .nav-group-items .tab-btn:hover {
+    background: var(--surface2);
+    color: var(--text);
+  }
+
+  .nav-group-items .tab-btn.active {
+    background: rgba(37,99,235,0.1);
+    color: var(--accent);
+    border-bottom: none;
+  }
+
+  /* 모바일 */
+  @media (max-width: 768px) {
+    .nav-tabs { padding: 10px 16px; gap: 6px; }
+    .nav-group-btn { font-size: 12px; padding: 6px 10px; }
   }
 
   .tab-dot {
     width: 6px; height: 6px;
     border-radius: 50%;
     background: var(--text3);
+    flex-shrink: 0;
   }
   .tab-btn.active .tab-dot { background: var(--accent); }
 
@@ -642,36 +705,60 @@
 </header>
 
 <!-- Nav Tabs -->
-<div class="nav-tabs">
-  <button class="tab-btn active" onclick="switchTab('dart')">
-    <div class="tab-dot"></div> DART 지분변동
-  </button>
-  <button class="tab-btn" onclick="switchTab('nps')">
-    <div class="tab-dot"></div> 국민연금
-  </button>
-  <button class="tab-btn" onclick="switchTab('legends')">
-    <div class="tab-dot"></div> 투자 전설
-  </button>
-  <button class="tab-btn" onclick="switchTab('whale')">
-    <div class="tab-dot"></div> 종목별 고래 추적
-  </button>
-  <button class="tab-btn" onclick="switchTab('krx')" style="position:relative">
-    <div class="tab-dot"></div> 외국인·기관 순매수
-    <span style="position:absolute;top:6px;right:6px;width:6px;height:6px;border-radius:50%;background:#10b981"></span>
-  </button>
-  <button class="tab-btn" onclick="switchTab('live')">
-    <div class="tab-dot"></div> 실시간 시세
-  </button>
-  <button class="tab-btn" onclick="switchTab('news')">
-    <div class="tab-dot"></div> 뉴스 감성
-  </button>
-  <button class="tab-btn" onclick="switchTab('calendar')">
-    <div class="tab-dot"></div> 공시 캘린더
-  </button>
-  <button class="tab-btn" onclick="switchTab('insider')">
-    <div class="tab-dot"></div> 내부자 거래
-  </button>
-  </button>
+<div class="nav-tabs" id="main-nav">
+
+  <!-- 그룹 1: 공시·수급 -->
+  <div class="nav-group">
+    <button class="nav-group-btn" onclick="toggleGroup('g1',this)">
+      📊 공시·수급 <span class="nav-arrow">▾</span>
+    </button>
+    <div class="nav-group-items" id="g1">
+      <button class="tab-btn active" onclick="switchTab('dart',this)"><div class="tab-dot"></div>DART 지분변동</button>
+      <button class="tab-btn" onclick="switchTab('krx',this)"><div class="tab-dot" style="background:#10b981"></div>외국인·기관 순매수</button>
+      <button class="tab-btn" onclick="switchTab('supply',this)"><div class="tab-dot"></div>수급 분석</button>
+      <button class="tab-btn" onclick="switchTab('calendar',this)"><div class="tab-dot"></div>공시 캘린더</button>
+    </div>
+  </div>
+
+  <!-- 그룹 2: 포트폴리오 -->
+  <div class="nav-group">
+    <button class="nav-group-btn" onclick="toggleGroup('g2',this)">
+      🐋 포트폴리오 <span class="nav-arrow">▾</span>
+    </button>
+    <div class="nav-group-items" id="g2">
+      <button class="tab-btn" onclick="switchTab('nps',this)"><div class="tab-dot"></div>국민연금</button>
+      <button class="tab-btn" onclick="switchTab('legends',this)"><div class="tab-dot"></div>투자 전설</button>
+      <button class="tab-btn" onclick="switchTab('whale',this)"><div class="tab-dot"></div>종목별 고래 추적</button>
+      <button class="tab-btn" onclick="switchTab('insider',this)"><div class="tab-dot"></div>내부자 거래</button>
+    </div>
+  </div>
+
+  <!-- 그룹 3: 시세·분석 -->
+  <div class="nav-group">
+    <button class="nav-group-btn" onclick="toggleGroup('g3',this)">
+      📈 시세·분석 <span class="nav-arrow">▾</span>
+    </button>
+    <div class="nav-group-items" id="g3">
+      <button class="tab-btn" onclick="switchTab('live',this)"><div class="tab-dot"></div>실시간 시세</button>
+      <button class="tab-btn" onclick="switchTab('news',this)"><div class="tab-dot"></div>뉴스 감성</button>
+      <button class="tab-btn" onclick="switchTab('valuation',this)"><div class="tab-dot"></div>밸류에이션</button>
+      <button class="tab-btn" onclick="switchTab('macro',this)"><div class="tab-dot"></div>매크로</button>
+    </div>
+  </div>
+
+  <!-- 그룹 4: AI 추천 (강조) -->
+  <div class="nav-group">
+    <button class="nav-group-btn" onclick="toggleGroup('g4',this)" style="background:linear-gradient(135deg,rgba(139,92,246,0.15),rgba(37,99,235,0.15));border-color:rgba(139,92,246,0.4);color:#8b5cf6">
+      🎯 AI 추천 <span class="nav-arrow">▾</span>
+      <span style="width:6px;height:6px;border-radius:50%;background:#8b5cf6;display:inline-block;margin-left:4px;animation:pulse 1.5s infinite;vertical-align:middle"></span>
+    </button>
+    <div class="nav-group-items" id="g4">
+      <button class="tab-btn" onclick="switchTab('score',this)"><div class="tab-dot" style="background:#8b5cf6"></div>AI 종합 스코어</button>
+      <button class="tab-btn" onclick="switchTab('signal',this)"><div class="tab-dot" style="background:#ef4444"></div>매수·매도 신호</button>
+      <button class="tab-btn" onclick="switchTab('today',this)" style="font-weight:700;color:#8b5cf6"><div class="tab-dot" style="background:#8b5cf6"></div>⭐ 오늘의 추천</button>
+    </div>
+  </div>
+
 </div>
 
 <!-- ═══════════════════════════════════════════
@@ -2560,7 +2647,7 @@ ${JSON.stringify(KRX_DATA.slice(0,10), null, 2)}
 
 // ⚙️ Finnhub API 키 — GitHub Secrets로 자동 주입됨
 // 로컬 테스트 시 아래에 직접 입력
-const FINNHUB_KEY = window.FINNHUB_API_KEY || 'ct_d8tihhpr01qhcnk3m1egd8tihhpr01qhcnk3m1f0';
+const FINNHUB_KEY = window.FINNHUB_API_KEY || '';
 
 const KR_TICKERS = [
   { ticker:'005930', name:'삼성전자',   high52:88800,  short:1.2 },
