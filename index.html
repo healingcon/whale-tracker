@@ -4097,7 +4097,9 @@ let signalResults = [];
 let signalFilter = 'all';
 
 // 기술적 지표 계산
-function calcSignals(ticker, price, prev) {
+function calcSignals(ticker, price, prev, name) {
+  // name이 없으면 SIGNAL_STOCKS나 ALL_STOCKS_DB에서 찾기
+  if(!name) name = SIGNAL_STOCKS.find(s=>s.ticker===ticker)?.name || ALL_STOCKS_DB.find(s=>s.ticker===ticker)?.name || ticker;
   const info = STOCK_INFO[ticker] || {};
   const basePrice = price;
   const days = 60;
@@ -4233,7 +4235,7 @@ function renderSignalCard(r) {
           <span class="ticker ticker-btn" style="font-size:12px" onclick="openChartModal('${r.ticker}')">${r.ticker}</span>
         </div>
         <div style="min-width:0;flex:1">
-          <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.name}</div>
+          <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.name || SIGNAL_STOCKS.find(s=>s.ticker===r.ticker)?.name || r.ticker}</div>
           <div style="font-size:12px;font-family:var(--mono);color:var(--text2)" data-price-ticker="${r.ticker}">
             <span style="font-weight:600">${livePriceStr}</span>
             <span class="change-badge ${livePct>=0?'up':'down'}" style="font-size:10px;margin-left:4px">${livePct>=0?'+':''}${livePct.toFixed(2)}%</span>
@@ -4303,7 +4305,7 @@ async function runSignalAnalysis() {
   btn.disabled = true;
 
   // 기술적 분석 실행
-  signalResults = SIGNAL_STOCKS.map(s => calcSignals(s.ticker, s.price, s.prev));
+  signalResults = SIGNAL_STOCKS.map(s => calcSignals(s.ticker, s.price, s.prev, s.name));
   signalResults.sort((a,b) => b.net - a.net);
 
   // 통계 업데이트
@@ -4405,7 +4407,7 @@ async function runTodayAnalysis() {
   clearInterval(stepTimer);
 
   // 기술적 신호 계산
-  const techResults = SIGNAL_STOCKS.map(s => calcSignals(s.ticker, s.price, s.prev));
+  const techResults = SIGNAL_STOCKS.map(s => calcSignals(s.ticker, s.price, s.prev, s.name));
 
   // 종합 스코어 매핑
   const scoreMap = {};
@@ -4558,7 +4560,7 @@ ${worst ? `${worst.name}은 ${worst.reasons.filter(r=>r.includes('⚠️')).slic
         <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0">
           <span class="ticker ticker-btn" onclick="openChartModal('${s.ticker}')" style="font-size:12px;flex-shrink:0">${s.ticker}</span>
           <div style="min-width:0">
-            <div style="font-size:15px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.name}</div>
+            <div style="font-size:15px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.name || SIGNAL_STOCKS.find(st=>st.ticker===s.ticker)?.name || s.ticker}</div>
             <div style="font-size:12px;font-family:var(--mono)" data-price-ticker="${s.ticker}">${priceWithChg(s.ticker) || (isKR?s.price.toLocaleString()+'원':'$'+s.price.toFixed(2))}</div>
           </div>
         </div>
