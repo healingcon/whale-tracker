@@ -4219,19 +4219,30 @@ function renderSignalCard(r) {
   const chg = r.price - (SIGNAL_STOCKS.find(s=>s.ticker===r.ticker)?.prev||r.price);
   const chgPct = ((chg/(r.price-chg))*100).toFixed(2);
 
+  // 실시간 가격 우선 사용
+  const liveD = getPrice(r.ticker);
+  const livePrice = liveD.price || r.price;
+  const livePct = liveD.chgPct !== undefined ? liveD.chgPct : parseFloat(chgPct);
+  const livePriceStr = isKR ? Math.round(livePrice).toLocaleString()+'원' : '$'+parseFloat(livePrice).toFixed(2);
+
   return `
-  <div class="chart-card" style="border-top:3px solid ${r.verdictColor};cursor:pointer" onclick="openChartModal('${r.ticker}')">
+  <div class="chart-card" style="border-top:3px solid ${r.verdictColor}" onclick="openChartModal('${r.ticker}')" style="cursor:pointer">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-      <div style="display:flex;align-items:center;gap:10px">
-        <span class="ticker" style="font-size:13px">${r.ticker}</span>
-        <div>
-          <div style="font-size:13px;font-weight:600;color:var(--text)">${r.name}</div>
-          <div style="font-size:12px;font-family:var(--mono);color:var(--text2)">${fmtP(r.price)} <span style="color:${chg>=0?'var(--green)':'var(--red)'}">${chg>=0?'+':''}${chgPct}%</span></div>
+      <div style="display:flex;align-items:flex-start;gap:10px;flex:1;min-width:0">
+        <div style="flex-shrink:0">
+          <span class="ticker ticker-btn" style="font-size:12px" onclick="openChartModal('${r.ticker}')">${r.ticker}</span>
+        </div>
+        <div style="min-width:0;flex:1">
+          <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.name}</div>
+          <div style="font-size:12px;font-family:var(--mono);color:var(--text2)" data-price-ticker="${r.ticker}">
+            <span style="font-weight:600">${livePriceStr}</span>
+            <span class="change-badge ${livePct>=0?'up':'down'}" style="font-size:10px;margin-left:4px">${livePct>=0?'+':''}${livePct.toFixed(2)}%</span>
+          </div>
         </div>
       </div>
-      <div style="text-align:right">
-        <div style="font-size:20px">${r.verdictIcon}</div>
-        <div style="font-size:12px;font-weight:700;color:${r.verdictColor};margin-top:2px">${r.verdict}</div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-size:22px">${r.verdictIcon}</div>
+        <div style="font-size:12px;font-weight:700;color:${r.verdictColor};margin-top:2px;white-space:nowrap">${r.verdict}</div>
       </div>
     </div>
 
@@ -4544,11 +4555,11 @@ ${worst ? `${worst.name}은 ${worst.reasons.filter(r=>r.includes('⚠️')).slic
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;border-left:4px solid ${borderColor}">
       <!-- 종목 헤더 -->
       <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border)">
-        <div style="display:flex;align-items:center;gap:12px">
-          <span class="ticker ticker-btn" onclick="openChartModal('${s.ticker}')" style="font-size:14px">${s.ticker}</span>
-          <div>
-            <div style="font-size:15px;font-weight:700;color:var(--text)">${s.name}</div>
-            <div style="font-size:12px;color:var(--text3)">${isKR?'국내':'미국'} · ${fmt(s.price)}</div>
+        <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0">
+          <span class="ticker ticker-btn" onclick="openChartModal('${s.ticker}')" style="font-size:12px;flex-shrink:0">${s.ticker}</span>
+          <div style="min-width:0">
+            <div style="font-size:15px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.name}</div>
+            <div style="font-size:12px;font-family:var(--mono)" data-price-ticker="${s.ticker}">${priceWithChg(s.ticker) || (isKR?s.price.toLocaleString()+'원':'$'+s.price.toFixed(2))}</div>
           </div>
         </div>
         <div style="text-align:right">
@@ -4637,7 +4648,8 @@ ${worst ? `${worst.name}은 ${worst.reasons.filter(r=>r.includes('⚠️')).slic
     <tr style="border-bottom:1px solid var(--border);${s.total>=65?'background:rgba(5,150,105,0.03)':s.total<40?'background:rgba(239,68,68,0.03)':''}">
       <td style="padding:10px 14px;white-space:nowrap">
         <span class="ticker ticker-btn" onclick="openChartModal('${s.ticker}')" style="font-size:12px">${s.ticker}</span>
-        <span style="font-size:12px;color:var(--text2);margin-left:6px">${s.name}</span>
+        <br><span style="font-size:12px;font-weight:600;color:var(--text)">${s.name}</span>
+        <br><span style="font-size:11px" data-price-ticker="${s.ticker}">${priceWithChg(s.ticker)}</span>
       </td>
       <td style="text-align:center;padding:10px">${dot(s.techScore)}</td>
       <td style="text-align:center;padding:10px">${dot(s.supplyScore)}</td>
