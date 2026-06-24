@@ -2554,45 +2554,120 @@ ${JSON.stringify(KRX_DATA.slice(0,10), null, 2)}
 // ═══════════════════════════════════════════
 // 실시간 시세 데이터
 // ═══════════════════════════════════════════
-const KR_STOCKS = [
-  { ticker:'005930', name:'삼성전자', price:71400, prev:70800, high52:88800, short:1.2 },
-  { ticker:'000660', name:'SK하이닉스', price:192500, prev:188000, high52:238500, short:0.8 },
-  { ticker:'005380', name:'현대차', price:243000, prev:240500, high52:287500, short:0.5 },
-  { ticker:'051910', name:'LG화학', price:312000, prev:315000, high52:489000, short:2.1 },
-  { ticker:'035420', name:'NAVER', price:172500, prev:174000, high52:248500, short:1.8 },
-  { ticker:'006400', name:'삼성SDI', price:248000, prev:245000, high52:498000, short:1.5 },
+// ═══════════════════════════════════════════
+// 실시간 가격 — Finnhub(미국) + 네이버금융(국내)
+// ═══════════════════════════════════════════
+
+// ⚙️ Finnhub API 키 — GitHub Secrets로 자동 주입됨
+// 로컬 테스트 시 아래에 직접 입력
+const FINNHUB_KEY = window.FINNHUB_API_KEY || '';
+
+const KR_TICKERS = [
+  { ticker:'005930', name:'삼성전자',   high52:88800,  short:1.2 },
+  { ticker:'000660', name:'SK하이닉스', high52:238500, short:0.8 },
+  { ticker:'005380', name:'현대차',     high52:287500, short:0.5 },
+  { ticker:'051910', name:'LG화학',     high52:489000, short:2.1 },
+  { ticker:'035420', name:'NAVER',      high52:248500, short:1.8 },
+  { ticker:'006400', name:'삼성SDI',    high52:498000, short:1.5 },
 ];
 
-const US_STOCKS = [
-  { ticker:'AAPL',  name:'Apple',     price:213.49, prev:211.20, high52:237.49 },
-  { ticker:'MSFT',  name:'Microsoft', price:448.20, prev:445.30, high52:468.35 },
-  { ticker:'NVDA',  name:'NVIDIA',    price:134.80, prev:131.38, high52:153.13 },
-  { ticker:'AMZN',  name:'Amazon',    price:223.75, prev:221.90, high52:242.52 },
-  { ticker:'META',  name:'Meta',      price:612.30, prev:608.45, high52:638.40 },
-  { ticker:'TSLA',  name:'Tesla',     price:248.90, prev:252.10, high52:358.64 },
+const US_TICKERS = [
+  { ticker:'AAPL', name:'Apple'     },
+  { ticker:'MSFT', name:'Microsoft' },
+  { ticker:'NVDA', name:'NVIDIA'    },
+  { ticker:'AMZN', name:'Amazon'    },
+  { ticker:'META', name:'Meta'      },
+  { ticker:'TSLA', name:'Tesla'     },
 ];
 
-const FX_DATA = {
-  usd: { rate: 1384.50, chg: +2.30 },
-  jpy: { rate: 9.21, chg: -0.04 },
-  gold: { rate: 2341.80, chg: +8.50 },
-};
+// 캐시 (마지막 가격 저장)
+let priceCache = {};
 
 function fmt(n, dec=0) {
   return n.toLocaleString('ko-KR', { minimumFractionDigits: dec, maximumFractionDigits: dec });
 }
 
-function renderLivePrices() {
-  // 환율
-  const u = FX_DATA.usd, j = FX_DATA.jpy, g = FX_DATA.gold;
-  document.getElementById('fx-usd').textContent = fmt(u.rate);
-  document.getElementById('fx-usd-chg').textContent = (u.chg>0?'+':'') + u.chg + '원';
-  document.getElementById('fx-jpy').textContent = fmt(j.rate, 2);
-  document.getElementById('fx-jpy-chg').textContent = (j.chg>0?'+':'') + j.chg + '원';
-  document.getElementById('fx-gold').textContent = '$' + fmt(g.rate, 0);
-  document.getElementById('fx-gold-chg').textContent = (g.chg>0?'+':'') + '$' + g.chg;
+// ── 네이버금융 국내 주가 (CORS 프록시) ──
+async function fetchNaverPrice(ticker) {
+  const proxies = [
+    `https://corsproxy.io/?https://finance.naver.com/item/main.nhn?code=${ticker}`,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://finance.naver.com/item/main.nhn?code=${ticker}`)}`,
+  ];
+  for (const url of proxies) {
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+      const text = await res.text();
+      // 현재가 파싱
+      const priceMatch = text.match(/id="_nowVal"[^>]*>([\d,]+)</);
+      const prevMatch  = text.match(/id="_cvsPrice"[^>]*>([\d,]+)</);
+      const chgPctMatch= text.match(/id="_rate"[^>]*>[^\d-]*([\d.-]+)/);
+      if (priceMatch) {
+        const price = parseInt(priceMatch[1].replace(/,/g,''));
+        const prev  = prevMatch ? parseInt(prevMatch[1].replace(/,/g,'')) : price;
+        const chgPct= chgPctMatch ? parseFloat(chgPctMatch[1]) : 0;
+        return { price, prev, chgPct, source:'naver' };
+      }
+    } catch(e) { continue; }
+  }
+  return null;
+}
 
-  // BTC (Binance REST)
+// ── Finnhub 미국 주가 ──
+async function fetchFinnhubPrice(ticker) {
+  if (!FINNHUB_KEY) return null;
+  try {
+    const res = await fetch(
+      `https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${FINNHUB_KEY}`,
+      { signal: AbortSignal.timeout(5000) }
+    );
+    const d = await res.json();
+    if (!d.c) return null;
+    return {
+      price: d.c,
+      prev:  d.pc,
+      chg:   d.c - d.pc,
+      chgPct:((d.c - d.pc) / d.pc * 100),
+      high:  d.h,
+      low:   d.l,
+      open:  d.o,
+      source:'finnhub'
+    };
+  } catch(e) { return null; }
+}
+
+// ── 환율 (ExchangeRate-API 무료) ──
+async function fetchFxRates() {
+  try {
+    const res = await fetch('https://open.er-api.com/v6/latest/USD', { signal: AbortSignal.timeout(5000) });
+    const d = await res.json();
+    if (d.rates) {
+      const krw = d.rates.KRW || 1380;
+      const jpy = d.rates.JPY || 150;
+      return { usdKrw: krw, jpyKrw: krw/jpy };
+    }
+  } catch(e) {}
+  return { usdKrw: 1384, jpyKrw: 9.21 };
+}
+
+// ── 금 시세 (metals-api 대체: Yahoo Finance) ──
+async function fetchGoldPrice() {
+  if (!FINNHUB_KEY) return null;
+  try {
+    const res = await fetch(
+      `https://finnhub.io/api/v1/quote?symbol=OANDA:XAU_USD&token=${FINNHUB_KEY}`,
+      { signal: AbortSignal.timeout(5000) }
+    );
+    const d = await res.json();
+    return d.c || null;
+  } catch(e) { return null; }
+}
+
+// ── 메인 렌더 함수 ──
+async function renderLivePrices() {
+  const now = new Date();
+  document.getElementById('live-updated').textContent = '업데이트 중...';
+
+  // BTC (Binance)
   fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT')
     .then(r=>r.json()).then(d=>{
       const p = parseFloat(d.lastPrice), chg = parseFloat(d.priceChangePercent);
@@ -2600,59 +2675,107 @@ function renderLivePrices() {
       const el = document.getElementById('live-btc-chg');
       el.textContent = (chg>0?'+':'') + chg.toFixed(2) + '%';
       el.style.color = chg>0?'var(--green)':'var(--red)';
-    }).catch(()=>{
-      document.getElementById('live-btc').textContent = '$104,200';
-    });
+    }).catch(()=>{});
 
-  // 국내 종목 (시뮬 + 약간 랜덤)
+  // 환율
+  fetchFxRates().then(fx => {
+    document.getElementById('fx-usd').textContent = fmt(fx.usdKrw, 0);
+    document.getElementById('fx-usd-chg').textContent = 'USD/KRW';
+    document.getElementById('fx-jpy').textContent = fmt(fx.jpyKrw, 2);
+    document.getElementById('fx-jpy-chg').textContent = 'JPY/KRW';
+  });
+
+  // 금 시세
+  fetchGoldPrice().then(gold => {
+    if (gold) {
+      document.getElementById('fx-gold').textContent = '$' + fmt(gold, 0);
+      document.getElementById('fx-gold-chg').textContent = 'USD/oz';
+    }
+  });
+
+  // 국내 종목 (네이버금융)
   const krTbody = document.getElementById('live-kr-tbody');
-  krTbody.innerHTML = KR_STOCKS.map(s => {
-    const noise = (Math.random()-0.5)*200;
-    const price = Math.round(s.price + noise);
-    const chg = price - s.prev;
-    const chgPct = ((chg/s.prev)*100).toFixed(2);
-    const cls = chg>=0?'up':'down';
-    const isHigh = price >= s.high52 * 0.98;
-    return `<tr>
-      <td><span class="ticker ticker-btn" onclick="openChartModal('${s.ticker}')">${s.ticker}</span><br><span style="font-size:12px;color:var(--text2)">${s.name}</span></td>
-      <td style="font-family:var(--mono);font-weight:600;cursor:pointer" onclick="openChartModal('${s.ticker}')">${fmt(price)}원</td>
-      <td><span class="change-badge ${cls}">${chg>=0?'+':''}${fmt(chg)}</span></td>
-      <td><span class="change-badge ${cls}">${chg>=0?'+':''}${chgPct}%</span></td>
-      <td style="font-family:var(--mono);font-size:12px;color:var(--text3)">${fmt(Math.round(Math.random()*5000000))}주</td>
-      <td style="font-family:var(--mono);font-size:12px">${fmt(s.high52)}원 ${isHigh?'<span class="change-badge new">★신고가</span>':''}</td>
-      <td style="font-family:var(--mono);font-size:12px;color:var(--text3)">${s.short}%</td>
-    </tr>`;
-  }).join('');
+  krTbody.innerHTML = KR_TICKERS.map(s =>
+    `<tr id="kr-row-${s.ticker}">
+      <td><span class="ticker ticker-btn" onclick="openChartModal('${s.ticker}')">${s.ticker}</span><br>
+          <span style="font-size:12px;color:var(--text2)">${s.name}</span></td>
+      <td colspan="6" style="color:var(--text3);font-size:12px;font-family:var(--mono)">
+        <div class="ai-loading"><div class="ai-spinner" style="width:12px;height:12px;border-width:2px"></div> 로딩 중...</div>
+      </td>
+    </tr>`
+  ).join('');
 
-  // 미국 종목
+  // 국내 종목 순차 로드
+  for (const s of KR_TICKERS) {
+    const data = await fetchNaverPrice(s.ticker) || priceCache[s.ticker];
+    if (data) {
+      priceCache[s.ticker] = data;
+      const chg = data.price - data.prev;
+      const cls = chg >= 0 ? 'up' : 'down';
+      const isHigh = data.price >= s.high52 * 0.98;
+      const row = document.getElementById(`kr-row-${s.ticker}`);
+      if (row) row.innerHTML = `
+        <td><span class="ticker ticker-btn" onclick="openChartModal('${s.ticker}')">${s.ticker}</span><br>
+            <span style="font-size:12px;color:var(--text2)">${s.name}</span></td>
+        <td style="font-family:var(--mono);font-weight:600;cursor:pointer" onclick="openChartModal('${s.ticker}')">${fmt(data.price)}원</td>
+        <td><span class="change-badge ${cls}">${chg>=0?'+':''}${fmt(chg)}</span></td>
+        <td><span class="change-badge ${cls}">${chg>=0?'+':''}${data.chgPct?.toFixed(2)||'0.00'}%</span></td>
+        <td style="font-family:var(--mono);font-size:12px;color:var(--text3)">—</td>
+        <td style="font-family:var(--mono);font-size:12px">${fmt(s.high52)}원 ${isHigh?'<span class="change-badge new">★신고가</span>':''}</td>
+        <td style="font-family:var(--mono);font-size:12px;color:var(--text3)">${s.short}%</td>`;
+    }
+    await new Promise(r => setTimeout(r, 300)); // 요청 간격
+  }
+
+  // 미국 종목 (Finnhub)
   const usTbody = document.getElementById('live-us-tbody');
-  usTbody.innerHTML = US_STOCKS.map(s => {
-    const noise = (Math.random()-0.5)*2;
-    const price = +(s.price + noise).toFixed(2);
-    const chg = +(price - s.prev).toFixed(2);
-    const chgPct = ((chg/s.prev)*100).toFixed(2);
-    const cls = chg>=0?'up':'down';
-    const isHigh = price >= s.high52 * 0.99;
-    return `<tr>
-      <td><span class="ticker ticker-btn" onclick="openChartModal('${s.ticker}')">${s.ticker}</span><br><span style="font-size:12px;color:var(--text2)">${s.name}</span></td>
-      <td style="font-family:var(--mono);font-weight:600;cursor:pointer" onclick="openChartModal('${s.ticker}')">$${price.toFixed(2)}</td>
-      <td><span class="change-badge ${cls}">${chg>=0?'+':''}$${Math.abs(chg).toFixed(2)}</span></td>
-      <td><span class="change-badge ${cls}">${chg>=0?'+':''}${chgPct}%</span></td>
-      <td style="font-family:var(--mono);font-size:12px">$${s.high52}</td>
-      <td>${isHigh?'<span class="change-badge new">★ 신고가 근접</span>':'<span style="font-size:11px;color:var(--text3)">—</span>'}</td>
-    </tr>`;
-  }).join('');
 
-  const now = new Date();
+  if (!FINNHUB_KEY) {
+    usTbody.innerHTML = `<tr><td colspan="6" style="padding:20px;text-align:center;color:var(--text3);font-size:13px">
+      ⚠️ Finnhub API 키가 필요해요.<br>
+      <span style="font-size:11px">GitHub Secrets에 <code>FINNHUB_API_KEY</code> 등록 후 Actions 실행</span>
+    </td></tr>`;
+  } else {
+    usTbody.innerHTML = US_TICKERS.map(s =>
+      `<tr id="us-row-${s.ticker}">
+        <td><span class="ticker ticker-btn" onclick="openChartModal('${s.ticker}')">${s.ticker}</span><br>
+            <span style="font-size:12px;color:var(--text2)">${s.name}</span></td>
+        <td colspan="5" style="color:var(--text3);font-size:12px;font-family:var(--mono)">
+          <div class="ai-loading"><div class="ai-spinner" style="width:12px;height:12px;border-width:2px"></div> 로딩 중...</div>
+        </td>
+      </tr>`
+    ).join('');
+
+    for (const s of US_TICKERS) {
+      const data = await fetchFinnhubPrice(s.ticker) || priceCache['US_'+s.ticker];
+      if (data) {
+        priceCache['US_'+s.ticker] = data;
+        const cls = data.chg >= 0 ? 'up' : 'down';
+        const high52 = STOCK_INFO[s.ticker]?.high52 || 0;
+        const isHigh = high52 && data.price >= high52 * 0.99;
+        const row = document.getElementById(`us-row-${s.ticker}`);
+        if (row) row.innerHTML = `
+          <td><span class="ticker ticker-btn" onclick="openChartModal('${s.ticker}')">${s.ticker}</span><br>
+              <span style="font-size:12px;color:var(--text2)">${s.name}</span></td>
+          <td style="font-family:var(--mono);font-weight:600;cursor:pointer" onclick="openChartModal('${s.ticker}')">$${data.price.toFixed(2)}</td>
+          <td><span class="change-badge ${cls}">${data.chg>=0?'+':''}$${Math.abs(data.chg).toFixed(2)}</span></td>
+          <td><span class="change-badge ${cls}">${data.chgPct>=0?'+':''}${data.chgPct.toFixed(2)}%</span></td>
+          <td style="font-family:var(--mono);font-size:12px">${high52?'$'+high52:'—'}</td>
+          <td>${isHigh?'<span class="change-badge new">★ 신고가 근접</span>':'<span style="font-size:11px;color:var(--text3)">—</span>'}</td>`;
+      }
+      await new Promise(r => setTimeout(r, 200));
+    }
+  }
+
   document.getElementById('live-updated').textContent =
-    `업데이트: ${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+    `업데이트: ${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')} (네이버금융·Finnhub)`;
 }
 
-// 30초마다 자동 갱신
+// 1분마다 자동 갱신 (네이버 15분 지연이라 너무 자주 호출 불필요)
 let liveTimer = null;
 function startLiveTimer() {
   renderLivePrices();
-  liveTimer = setInterval(renderLivePrices, 30000);
+  liveTimer = setInterval(renderLivePrices, 60000);
 }
 
 // ═══════════════════════════════════════════
