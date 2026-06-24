@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>고래추적기 — 기관 지분 변동 추적</title>
+<title>StockWhale — 기관 지분 변동 추적 by healingcon</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Pretendard:wght@300;400;500;600;700&display=swap');
 
@@ -876,7 +876,10 @@
 <header>
   <div class="logo">
     <div class="logo-icon">🐋</div>
-    고래추적기
+    <div>
+      <div style="font-size:16px;font-weight:700;letter-spacing:-0.3px;line-height:1.2">StockWhale</div>
+      <div style="font-size:10px;font-weight:400;color:var(--text3);letter-spacing:0.5px;font-family:var(--mono)">by healingcon</div>
+    </div>
   </div>
   <div class="header-right" style="flex:1;justify-content:flex-end;gap:12px">
     <!-- 글로벌 종목 검색 -->
@@ -1474,10 +1477,16 @@
       <div class="section-title">뉴스 감성 분석</div>
       <div class="section-sub">고래 보유 종목 관련 뉴스 · Claude AI 감성 분류</div>
     </div>
-    <button class="ai-btn" onclick="analyzeWithAI('news')">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-      AI 전체 분석
-    </button>
+    <div style="display:flex;gap:8px">
+      <button class="filter-btn" onclick="loadRealNews()" id="news-reload-btn" style="display:flex;align-items:center;gap:5px">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        실제 뉴스 로드
+      </button>
+      <button class="ai-btn" onclick="analyzeWithAI('news')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+        AI 감성 분석
+      </button>
+    </div>
   </div>
   <div class="ai-panel" id="ai-news">
     <div class="ai-panel-header"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg> AI 분석 결과</div>
@@ -2000,7 +2009,7 @@
 </div><!-- /container -->
 
 <footer>
-  🐋 고래추적기 · DART API + SEC EDGAR 기반 · GitHub Actions 자동 업데이트<br>
+  🐋 StockWhale · DART API + SEC EDGAR 기반 · GitHub Actions 자동 업데이트 · Made by healingcon<br>
   <span style="opacity:0.5">투자 참고용 정보입니다. 투자 판단의 책임은 본인에게 있습니다.</span>
 </footer>
 
@@ -2009,146 +2018,20 @@
 // 샘플 데이터 (실제 운영 시 data/*.json에서 fetch)
 // ═══════════════════════════════════════════
 
-const DART_DATA = [
-  { ticker:'005930', name:'삼성전자', reporter:'국민연금공단', type:'buy', prev:8.23, curr:8.41, change:+0.18, shares:'+1,240,000', date:'2025-01-15' },
-  { ticker:'000660', name:'SK하이닉스', reporter:'블랙록', type:'buy', prev:4.11, curr:5.02, change:+0.91, shares:'+2,340,000', date:'2025-01-14' },
-  { ticker:'035420', name:'NAVER', reporter:'국민연금공단', type:'sell', prev:10.24, curr:9.98, change:-0.26, shares:'-520,000', date:'2025-01-13' },
-  { ticker:'051910', name:'LG화학', reporter:'싱가포르투자청', type:'new', prev:0, curr:5.12, change:+5.12, shares:'+1,890,000', date:'2025-01-12' },
-  { ticker:'005380', name:'현대차', reporter:'뱅가드그룹', type:'buy', prev:6.33, curr:6.89, change:+0.56, shares:'+890,000', date:'2025-01-11' },
-  { ticker:'207940', name:'삼성바이오로직스', reporter:'캐피탈그룹', type:'sell', prev:7.45, curr:6.92, change:-0.53, shares:'-340,000', date:'2025-01-10' },
-  { ticker:'006400', name:'삼성SDI', reporter:'노르웨이국부펀드', type:'buy', prev:5.01, curr:5.78, change:+0.77, shares:'+1,120,000', date:'2025-01-09' },
-];
+// DART 실제 공시 데이터 — data/dart_holdings.json에서 로드
+const DART_DATA = [];
 
-const NPS_KR_DATA = [
-  { rank:1, ticker:'005930', name:'삼성전자', pct:8.41, shares:'4,789만주', value:'284,500억', chg:'+0.18%', chgType:'up' },
-  { rank:2, ticker:'000660', name:'SK하이닉스', pct:6.72, shares:'488만주', value:'89,200억', chg:'-0.12%', chgType:'down' },
-  { rank:3, ticker:'005380', name:'현대차', pct:8.23, shares:'390만주', value:'68,900억', chg:'+0.56%', chgType:'up' },
-  { rank:4, ticker:'035420', name:'NAVER', pct:9.98, shares:'163만주', value:'34,100억', chg:'-0.26%', chgType:'down' },
-  { rank:5, ticker:'051910', name:'LG화학', pct:10.34, shares:'187만주', value:'43,200억', chg:'+0.34%', chgType:'up' },
-  { rank:6, ticker:'207940', name:'삼성바이오로직스', pct:6.92, shares:'44만주', value:'28,700억', chg:'-0.53%', chgType:'down' },
-  { rank:7, ticker:'006400', name:'삼성SDI', pct:5.78, shares:'79만주', value:'18,900억', chg:'+0.77%', chgType:'up' },
-];
+// 국민연금 국내 포트폴리오 — data/nps_kr.json에서 로드
+const NPS_KR_DATA = [];
 
-const NPS_US_DATA = [
-  { rank:1, ticker:'AAPL', name:'Apple Inc.', shares:'32,400,000', value:'$6.2B', chg:'+2.3%', chgType:'up' },
-  { rank:2, ticker:'MSFT', name:'Microsoft Corp.', shares:'18,200,000', value:'$7.1B', chg:'+1.1%', chgType:'up' },
-  { rank:3, ticker:'NVDA', name:'NVIDIA Corp.', shares:'24,100,000', value:'$12.4B', chg:'+8.9%', chgType:'up' },
-  { rank:4, ticker:'AMZN', name:'Amazon.com Inc.', shares:'15,800,000', value:'$3.4B', chg:'-0.8%', chgType:'down' },
-  { rank:5, ticker:'GOOGL', name:'Alphabet Inc.', shares:'11,200,000', value:'$2.1B', chg:'+0.5%', chgType:'up' },
-  { rank:6, ticker:'META', name:'Meta Platforms', shares:'9,700,000', value:'$5.8B', chg:'+3.2%', chgType:'up' },
-  { rank:7, ticker:'TSLA', name:'Tesla Inc.', shares:'8,900,000', value:'$2.3B', chg:'-2.1%', chgType:'down' },
-];
+// 국민연금 해외 포트폴리오 — data/nps_us.json에서 로드
+const NPS_US_DATA = [];
 
-const LEGENDS_DATA = [
-  {
-    name: '워런 버핏', firm:'Berkshire Hathaway', emoji:'🎩',
-    aum: '$347B',
-    holdings: [
-      { ticker:'AAPL', pct:45.2, chg:'+0%', type:'hold' },
-      { ticker:'BAC', pct:10.1, chg:'-1.2%', type:'sell' },
-      { ticker:'AXP', pct:8.4, chg:'+0%', type:'hold' },
-      { ticker:'KO', pct:6.8, chg:'+0%', type:'hold' },
-      { ticker:'CVX', pct:6.2, chg:'-0.8%', type:'sell' },
-    ]
-  },
-  {
-    name: '마이클 버리', firm:'Scion Asset Mgmt', emoji:'🐻',
-    aum: '$1.8B',
-    holdings: [
-      { ticker:'BIDU', pct:22.1, chg:'+5.4%', type:'buy' },
-      { ticker:'JD', pct:18.3, chg:'+3.1%', type:'buy' },
-      { ticker:'GEO', pct:12.4, chg:'+2.8%', type:'buy' },
-      { ticker:'CPRI', pct:9.7, chg:'+0%', type:'hold' },
-      { ticker:'RCM', pct:7.2, chg:'-4.1%', type:'sell' },
-    ]
-  },
-  {
-    name: '레이 달리오', firm:'Bridgewater Associates', emoji:'🌊',
-    aum: '$124B',
-    holdings: [
-      { ticker:'SPY', pct:14.2, chg:'+0.8%', type:'buy' },
-      { ticker:'GLD', pct:12.8, chg:'+1.2%', type:'buy' },
-      { ticker:'EEM', pct:8.9, chg:'-0.4%', type:'sell' },
-      { ticker:'VWO', pct:7.1, chg:'+0%', type:'hold' },
-      { ticker:'IVV', pct:6.4, chg:'+0.6%', type:'buy' },
-    ]
-  },
-  {
-    name: '빌 애크먼', firm:'Pershing Square', emoji:'📐',
-    aum: '$16.2B',
-    holdings: [
-      { ticker:'HLT', pct:19.3, chg:'+2.1%', type:'buy' },
-      { ticker:'QSR', pct:16.8, chg:'+0%', type:'hold' },
-      { ticker:'CP', pct:15.2, chg:'+0%', type:'hold' },
-      { ticker:'GOOGL', pct:14.1, chg:'+3.4%', type:'buy' },
-      { ticker:'CMG', pct:12.7, chg:'-1.2%', type:'sell' },
-    ]
-  },
-  {
-    name: '데이비드 테퍼', firm:'Appaloosa Mgmt', emoji:'🐎',
-    aum: '$14.8B',
-    holdings: [
-      { ticker:'META', pct:11.2, chg:'+4.8%', type:'buy' },
-      { ticker:'AMZN', pct:9.7, chg:'+2.3%', type:'buy' },
-      { ticker:'NVDA', pct:8.9, chg:'+5.1%', type:'buy' },
-      { ticker:'BABA', pct:8.4, chg:'+3.2%', type:'buy' },
-      { ticker:'MSFT', pct:7.1, chg:'+0%', type:'hold' },
-    ]
-  },
-  {
-    name: '조지 소로스', firm:'Soros Fund Mgmt', emoji:'🔮',
-    aum: '$8.9B',
-    holdings: [
-      { ticker:'NVS', pct:8.3, chg:'+2.1%', type:'buy' },
-      { ticker:'PLTR', pct:7.9, chg:'+12.4%', type:'buy' },
-      { ticker:'RIG', pct:6.2, chg:'-1.8%', type:'sell' },
-      { ticker:'IBIT', pct:5.8, chg:'+8.9%', type:'buy' },
-      { ticker:'RIVN', pct:4.1, chg:'-2.3%', type:'sell' },
-    ]
-  },
-];
+// 투자 전설 포트폴리오 — data/legends.json에서 로드
+const LEGENDS_DATA = [];
 
-const WHALE_STOCK_DATA = {
-  '삼성전자': [
-    { investor:'국민연금공단', type:'기관', pct:8.41, shares:'4,789만주', chg:'+0.18%', chgType:'up', recent:'2025.01.15 매수' },
-    { investor:'블랙록', type:'외국인', pct:4.23, shares:'2,401만주', chg:'-0.12%', chgType:'down', recent:'2025.01.10 매도' },
-    { investor:'뱅가드그룹', type:'외국인', pct:3.91, shares:'2,218만주', chg:'+0.05%', chgType:'up', recent:'2025.01.08 매수' },
-    { investor:'노르웨이국부펀드', type:'외국인', pct:1.84, shares:'1,044만주', chg:'+0.11%', chgType:'up', recent:'2025.01.07 매수' },
-    { investor:'삼성물산', type:'특수관계인', pct:5.01, shares:'2,843만주', chg:'0%', chgType:'hold', recent:'변동없음' },
-  ],
-  'SK하이닉스': [
-    { investor:'국민연금공단', type:'기관', pct:6.72, shares:'488만주', chg:'-0.12%', chgType:'down', recent:'2025.01.12 매도' },
-    { investor:'블랙록', type:'외국인', pct:5.02, shares:'364만주', chg:'+0.91%', chgType:'up', recent:'2025.01.14 매수' },
-    { investor:'SK(주)', type:'특수관계인', pct:20.07, shares:'1,456만주', chg:'0%', chgType:'hold', recent:'변동없음' },
-  ],
-  'AAPL': [
-    { investor:'워런 버핏 (Berkshire)', type:'전설 투자자', pct:5.83, shares:'905,560,000', chg:'0%', chgType:'hold', recent:'Q4 2024 보유 유지' },
-    { investor:'뱅가드그룹', type:'외국인', pct:8.91, shares:'1,380,000,000', chg:'+0.3%', chgType:'up', recent:'Q4 2024 매수' },
-    { investor:'블랙록', type:'외국인', pct:6.12, shares:'948,000,000', chg:'+0.2%', chgType:'up', recent:'Q4 2024 매수' },
-    { investor:'국민연금공단', type:'기관', pct:0.21, shares:'32,400,000', chg:'+2.3%', chgType:'up', recent:'Q4 2024 매수' },
-  ],
-  'NVDA': [
-    { investor:'데이비드 테퍼', type:'전설 투자자', pct:0.08, shares:'2,400,000', chg:'+5.1%', chgType:'up', recent:'Q4 2024 매수' },
-    { investor:'조지 소로스', type:'전설 투자자', pct:0.04, shares:'1,200,000', chg:'+8.9%', chgType:'up', recent:'Q4 2024 신규매수' },
-    { investor:'뱅가드그룹', type:'외국인', pct:7.21, shares:'175,000,000', chg:'+1.2%', chgType:'up', recent:'Q4 2024 매수' },
-    { investor:'국민연금공단', type:'기관', pct:0.09, shares:'24,100,000', chg:'+8.9%', chgType:'up', recent:'Q4 2024 매수' },
-  ],
-  '현대차': [
-    { investor:'국민연금공단', type:'기관', pct:8.23, shares:'390만주', chg:'+0.56%', chgType:'up', recent:'2025.01.11 매수' },
-    { investor:'뱅가드그룹', type:'외국인', pct:6.89, shares:'327만주', chg:'+0.56%', chgType:'up', recent:'2025.01.11 매수' },
-    { investor:'블랙록', type:'외국인', pct:3.12, shares:'148만주', chg:'-0.22%', chgType:'down', recent:'2025.01.08 매도' },
-  ],
-  'TSLA': [
-    { investor:'데이비드 테퍼', type:'전설 투자자', pct:0.12, shares:'3,800,000', chg:'-1.4%', chgType:'down', recent:'Q4 2024 일부 매도' },
-    { investor:'조지 소로스', type:'전설 투자자', pct:0.03, shares:'950,000', chg:'-2.1%', chgType:'down', recent:'Q4 2024 일부 매도' },
-    { investor:'뱅가드그룹', type:'외국인', pct:6.84, shares:'218,000,000', chg:'+0.4%', chgType:'up', recent:'Q4 2024 소폭 매수' },
-    { investor:'국민연금공단', type:'기관', pct:0.07, shares:'8,900,000', chg:'-2.1%', chgType:'down', recent:'Q4 2024 매도' },
-  ],
-  'SK하이닉스': [
-    { investor:'국민연금공단', type:'기관', pct:6.72, shares:'488만주', chg:'-0.12%', chgType:'down', recent:'2025.01.12 매도' },
-    { investor:'블랙록', type:'외국인', pct:5.02, shares:'364만주', chg:'+0.91%', chgType:'up', recent:'2025.01.14 매수' },
-  ],
-};
+// 종목별 고래 추적 — data/whale_stocks.json에서 로드
+const WHALE_STOCK_DATA = {};
 
 // switchTab — 아래 통합 버전 사용
 
@@ -2191,6 +2074,10 @@ function renderDart(data) {
 }
 
 function renderNpsKr() {
+  if(!NPS_KR_DATA.length) {
+    renderEmpty('nps-kr-tbody', 6, 'GitHub Actions 실행 후 국민연금 데이터가 로드됩니다');
+    return;
+  }
   document.getElementById('nps-kr-tbody').innerHTML = NPS_KR_DATA.map(d => `
     <tr>
       <td style="font-family:var(--mono);color:var(--text3)">${d.rank}</td>
@@ -2209,19 +2096,37 @@ function renderNpsKr() {
 }
 
 function renderNpsUs() {
-  document.getElementById('nps-us-tbody').innerHTML = NPS_US_DATA.map(d => `
+  if(!NPS_US_DATA.length) { renderEmpty('nps-us-tbody', 7, 'GitHub Actions 실행 후 SEC 13F 데이터가 로드됩니다'); return; }
+  document.getElementById('nps-us-tbody').innerHTML = NPS_US_DATA.map(d => {
+    const live = getPrice(d.ticker);
+    const pct = live.chgPct || parseFloat((d.chg||'0').replace('%',''));
+    const cls = pct>=0?'up':'down';
+    const priceStr = live.price ? '$'+live.price.toFixed(2) : '—';
+    return `
     <tr>
       <td style="font-family:var(--mono);color:var(--text3)">${d.rank}</td>
-      <td><span class="ticker">${d.ticker}</span></td>
-      <td style="color:var(--text2)">${d.name}</td>
+      <td><span class="ticker ticker-btn" onclick="openChartModal('${d.ticker}')">${d.ticker}</span></td>
+      <td style="color:var(--text2)">${live.name||d.name}</td>
       <td style="font-family:var(--mono);font-size:12px">${d.shares}</td>
       <td style="font-family:var(--mono);font-size:12px">${d.value}</td>
-      <td><span class="change-badge ${d.chgType}">${d.chgType==='up'?'▲':'▼'} ${d.chg}</span></td>
-    </tr>
-  `).join('');
+      <td><span class="change-badge ${cls}">${pct>=0?'▲':'▼'} ${Math.abs(pct).toFixed(2)}%</span></td>
+      <td data-price-ticker="${d.ticker}" style="font-family:var(--mono);font-size:12px">${priceStr}</td>
+    </tr>`;
+  }).join('');
+  // 백그라운드 가격 로드
+  queuePriceLoad(NPS_US_DATA.map(d=>d.ticker));
 }
 
 function renderLegends() {
+  if(!LEGENDS_DATA.length) {
+    const el = document.getElementById('legends-grid');
+    if(el) el.innerHTML = `<div style="grid-column:1/-1"><div class="empty-state">
+      <div class="empty-state-icon">🎩</div>
+      <div class="empty-state-text" style="margin-bottom:12px">투자 전설 포트폴리오 데이터 없음</div>
+      <div style="font-size:12px;color:var(--text3)">GitHub Actions 실행 후 SEC 13F 데이터가 자동 로드됩니다</div>
+    </div></div>`;
+    return;
+  }
   document.getElementById('legends-grid').innerHTML = LEGENDS_DATA.map(l => `
     <div class="whale-card">
       <div class="whale-card-header">
@@ -2345,7 +2250,7 @@ async function analyzeWithAI(section) {
     nps: `다음은 국민연금의 국내 주식 포트폴리오 데이터입니다:\n${JSON.stringify(NPS_KR_DATA, null, 2)}\n\n이 데이터를 분석해서 다음을 한국어로 요약해주세요:\n1. 국민연금의 최근 투자 방향성\n2. 주목할 종목과 비중 변화\n3. 섹터별 집중도 분석\n4. 개인 투자자 참고사항\n\n200자 내외로 핵심만 간결하게 작성해주세요.`,
     legends: `다음은 세계 주요 투자 전설들의 최근 포트폴리오 변동 데이터입니다:\n${JSON.stringify(LEGENDS_DATA, null, 2)}\n\n이 데이터를 분석해서 다음을 한국어로 요약해주세요:\n1. 투자 전설들이 공통적으로 매수하는 종목/섹터\n2. 눈에 띄는 이견이 있는 종목\n3. 중국 관련 포지션 변화\n4. 전체적인 투자 심리와 방향성\n\n200자 내외로 핵심만 간결하게 작성해주세요.`,
     whale: `다음은 국내외 주요 종목별 기관·고래 투자자 현황입니다:\n${JSON.stringify(WHALE_STOCK_DATA, null, 2)}\n\n이 데이터를 분석해서 다음을 한국어로 요약해주세요:\n1. 가장 많은 고래가 집중된 종목\n2. 고래들이 동시에 매도하는 위험 신호 종목\n3. 신규 진입 또는 급격한 비중 증가 종목\n4. 개인 투자자 시사점\n\n200자 내외로 핵심만 간결하게 작성해주세요.`,
-    news: `다음은 고래 보유 종목 관련 최신 뉴스 감성 분석 데이터입니다:\n${JSON.stringify(NEWS_DATA, null, 2)}\n\n이 데이터를 분석해서 다음을 한국어로 요약해주세요:\n1. 긍정 뉴스가 많은 종목 TOP3와 이유\n2. 부정 뉴스로 주의가 필요한 종목\n3. 전반적인 시장 감성 방향\n4. 투자자 관점 시사점\n\n200자 내외로 핵심만 작성해주세요.`,
+    news: `다음은 실제 수집된 종목 관련 뉴스 ${NEWS_DATA.length}건입니다:\n${NEWS_DATA.map(n=>`[${n.name}] ${n.title} (출처:${n.source})`).join('\n')}\n\n이 데이터를 분석해서 다음을 한국어로 요약해주세요:\n1. 긍정 뉴스가 많은 종목 TOP3와 이유\n2. 부정 뉴스로 주의가 필요한 종목\n3. 전반적인 시장 감성 방향\n4. 투자자 관점 시사점\n\n200자 내외로 핵심만 작성해주세요.`,
     insider: `다음은 최근 임원(내부자) 거래 데이터입니다:\n${JSON.stringify(INSIDER_DATA, null, 2)}\n\n이 데이터를 분석해서 다음을 한국어로 요약해주세요:\n1. 고래+임원 동시매수 종목과 그 의미\n2. CEO 대량 매도 종목의 리스크\n3. 내부자 거래 전반적 동향\n4. 개인 투자자 참고사항\n\n200자 내외로 핵심만 작성해주세요.`,
     supply: `다음은 오늘 수급 분석 데이터입니다.\n연기금: ${JSON.stringify(PENSION_DATA)}\n대차잔고: ${JSON.stringify(SHORT_DATA)}\nETF: ${JSON.stringify(ETF_DATA)}\n\n분석해서 한국어로 200자 내외 요약:\n1. 연기금 전체 매수 종목\n2. 대차잔고 감소 숏커버링 신호\n3. ETF 자금 유입 섹터\n4. 투자 시사점`,
     valuation: `다음은 고래 보유 종목 밸류에이션 데이터입니다.\n${JSON.stringify(VALUATION_DATA)}\n\n분석해서 한국어로 200자 내외 요약:\n1. 저PER+저PBR 저평가 종목\n2. 고배당 안정주\n3. ROE 높은 성장주\n4. 투자 우선순위 제안`,
@@ -2637,31 +2542,19 @@ function renderWhaleCharts(name, data) {
 // ═══════════════════════════════════════════
 
 // 샘플 데이터 (실제: KRX API or 네이버금융 스크래핑)
-const KRX_SAMPLE = [
-  { ticker:'005930', name:'삼성전자',   foreign:+2847, institute:+1203, change:+1.24 },
-  { ticker:'000660', name:'SK하이닉스', foreign:+1923, institute: +892, change:+2.31 },
-  { ticker:'005380', name:'현대차',     foreign: +834, institute: -234, change:+0.87 },
-  { ticker:'051910', name:'LG화학',     foreign: +723, institute: +445, change:+1.56 },
-  { ticker:'006400', name:'삼성SDI',    foreign: +612, institute: +321, change:+0.94 },
-  { ticker:'035420', name:'NAVER',      foreign: -456, institute: -189, change:-0.73 },
-  { ticker:'207940', name:'삼성바이오', foreign: +389, institute: -102, change:+0.45 },
-  { ticker:'003550', name:'LG',         foreign: +301, institute: +210, change:+1.12 },
-  { ticker:'015760', name:'한국전력',   foreign: -892, institute: +334, change:-2.34 },
-  { ticker:'035720', name:'카카오',     foreign: -723, institute: -445, change:-1.89 },
-  { ticker:'000270', name:'기아',       foreign: +567, institute: +123, change:+0.78 },
-  { ticker:'068270', name:'셀트리온',   foreign: +234, institute: +89,  change:+0.56 },
-  { ticker:'105560', name:'KB금융',     foreign: +198, institute: +312, change:+0.43 },
-  { ticker:'055550', name:'신한지주',   foreign: +176, institute: +267, change:+0.38 },
-  { ticker:'096770', name:'SK이노베이션',foreign:-312, institute:+145,  change:-0.67 },
-];
+// KRX 수급 데이터 — data/krx_today.json에서 로드
+const KRX_SAMPLE = [];
 
 let krxFilter = 'all';
 let KRX_DATA = [...KRX_SAMPLE];
 
 function loadKrxData() {
-  // 실제 운영 시: fetch('data/krx_today.json') 으로 교체
-  // GitHub Actions가 매일 16:00에 수집한 JSON을 읽어옴
-  KRX_DATA = [...KRX_SAMPLE];
+  // GitHub Actions JSON 우선, 없으면 KRX_SAMPLE
+  fetch('data/krx_today.json')
+    .then(r=>r.json())
+    .then(d=>{ if(d.data) { KRX_DATA = d.data; updateKrxStats(); renderKrxTable(KRX_DATA); renderKrxCharts(KRX_DATA); }})
+    .catch(()=>{}); // 파일 없으면 샘플 유지
+  KRX_DATA = [...KRX_SAMPLE]; // KRX_SAMPLE은 빈 배열이므로 실제론 빈 상태
 
   const now = new Date();
   document.getElementById('krx-updated').textContent =
@@ -2946,7 +2839,8 @@ async function fetchGoldPrice() {
 // ── 메인 렌더 함수 ──
 async function renderLivePrices() {
   const now = new Date();
-  document.getElementById('live-updated').textContent = '업데이트 중...';
+  const liveEl = document.getElementById('live-updated');
+  if(liveEl) liveEl.textContent = '업데이트 중...';
 
   // BTC (Binance)
   fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT')
@@ -3058,32 +2952,177 @@ async function renderLivePrices() {
     `업데이트: ${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')} (네이버금융·Finnhub)`;
 }
 
-// 1분마다 자동 갱신 (네이버 15분 지연이라 너무 자주 호출 불필요)
+// 실시간 시세 탭 — priceCache 기반으로 렌더
 let liveTimer = null;
 function startLiveTimer() {
   renderLivePrices();
-  liveTimer = setInterval(renderLivePrices, 60000);
+  liveTimer = setInterval(() => {
+    // 5분마다 전체 재로드
+    globalDataLoaded = false;
+    loadAllPrices();
+    renderLivePrices();
+  }, 300000); // 5분
 }
 
 // ═══════════════════════════════════════════
 // 뉴스 감성 분석 데이터
 // ═══════════════════════════════════════════
-const NEWS_DATA = [
-  { ticker:'삼성전자', title:'삼성전자, HBM4 공급 계약 완료...엔비디아 2분기 물량 확보', sentiment:'pos', score:82, time:'2시간 전', source:'한국경제' },
-  { ticker:'SK하이닉스', title:'SK하이닉스 1분기 영업이익 7.4조...시장 예상치 상회', sentiment:'pos', score:91, time:'3시간 전', source:'매일경제' },
-  { ticker:'NAVER', title:'네이버, EU 디지털시장법 조사 대상 포함...규제 리스크 부각', sentiment:'neg', score:-65, time:'4시간 전', source:'연합뉴스' },
-  { ticker:'LG화학', title:'LG화학 배터리 분할 검토설...주가 강세', sentiment:'pos', score:58, time:'5시간 전', source:'서울경제' },
-  { ticker:'삼성SDI', title:'삼성SDI, 전기차 수요 둔화로 2분기 실적 우려', sentiment:'neg', score:-45, time:'6시간 전', source:'뉴시스' },
-  { ticker:'현대차', title:'현대차그룹 미국 관세 영향 제한적...현지 생산 확대로 대응', sentiment:'neu', score:12, time:'7시간 전', source:'조선비즈' },
-  { ticker:'NVDA', title:'NVIDIA CEO "블랙웰 수요 폭발적...공급 부족 지속"', sentiment:'pos', score:88, time:'8시간 전', source:'Reuters' },
-  { ticker:'AAPL', title:'Apple, AI 기능 탑재 iPhone 16 판매 호조...중국 시장 회복세', sentiment:'pos', score:72, time:'9시간 전', source:'Bloomberg' },
-  { ticker:'META', title:'Meta, 광고 매출 성장세 지속...AI 투자 수익화 본격화', sentiment:'pos', score:79, time:'10시간 전', source:'WSJ' },
-  { ticker:'TSLA', title:'Tesla 2분기 인도량 실망...경쟁 심화로 마진 압박', sentiment:'neg', score:-58, time:'11시간 전', source:'FT' },
-];
-
+// 뉴스 데이터 (실제 로드 전 빈 배열)
+let NEWS_DATA = [];
 let newsFilter = 'all';
+let newsLoaded = false;
+
+// ── 네이버 금융 RSS + Google News RSS 실제 뉴스 로더 ──
+async function loadRealNews() {
+  const btn = document.getElementById('news-reload-btn');
+  if(btn) { btn.textContent = '⏳ 로딩 중...'; btn.disabled = true; }
+
+  const newsList = document.getElementById('news-list');
+  if(newsList) newsList.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3)"><div class="ai-spinner" style="display:inline-block;width:20px;height:20px;border-width:2px;margin-right:8px"></div>실제 뉴스 가져오는 중...</div>';
+
+  // 추적 종목 목록
+  const watchList = [
+    { keyword:'삼성전자', ticker:'005930' },
+    { keyword:'SK하이닉스', ticker:'000660' },
+    { keyword:'현대차', ticker:'005380' },
+    { keyword:'LG화학', ticker:'051910' },
+    { keyword:'NAVER', ticker:'035420' },
+    { keyword:'삼성SDI', ticker:'006400' },
+    { keyword:'NVIDIA', ticker:'NVDA' },
+    { keyword:'Apple', ticker:'AAPL' },
+    { keyword:'Tesla', ticker:'TSLA' },
+    { keyword:'Meta', ticker:'META' },
+  ];
+
+  const results = [];
+
+  // Google News RSS (CORS 프록시)
+  for(const stock of watchList.slice(0, 6)) {
+    const query = encodeURIComponent(`${stock.keyword} 주식`);
+    const rssUrl = `https://news.google.com/rss/search?q=${query}&hl=ko&gl=KR&ceid=KR:ko`;
+    const proxies = [
+      `https://corsproxy.io/?${encodeURIComponent(rssUrl)}`,
+      `https://api.allorigins.win/raw?url=${encodeURIComponent(rssUrl)}`,
+    ];
+
+    for(const url of proxies) {
+      try {
+        const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
+        const text = await res.text();
+        const parser = new DOMParser();
+        const xml = parser.parseFromString(text, 'text/xml');
+        const items = xml.querySelectorAll('item');
+
+        Array.from(items).slice(0, 2).forEach(item => {
+          const title = item.querySelector('title')?.textContent?.trim() || '';
+          const link  = item.querySelector('link')?.textContent?.trim() || '';
+          const pubDate = item.querySelector('pubDate')?.textContent || '';
+          const source = item.querySelector('source')?.textContent || 'Google News';
+
+          if(!title || title.length < 10) return;
+
+          // 간단 감성 분석 (키워드 기반)
+          const posWords = ['호재','급등','상승','매수','성장','호조','흑자','증가','돌파','신고가','계약','수주'];
+          const negWords = ['악재','급락','하락','매도','우려','리스크','손실','감소','이탈','조사','소송','부진'];
+          const titleLower = title.toLowerCase();
+          const posCount = posWords.filter(w => title.includes(w)).length;
+          const negCount = negWords.filter(w => title.includes(w)).length;
+          const score = (posCount - negCount) * 25;
+          const sentiment = score > 20 ? 'pos' : score < -20 ? 'neg' : 'neu';
+
+          // 시간 계산
+          const pubTime = pubDate ? new Date(pubDate) : new Date();
+          const diffMin = Math.round((Date.now() - pubTime.getTime()) / 60000);
+          const timeStr = diffMin < 60 ? `${diffMin}분 전` : `${Math.round(diffMin/60)}시간 전`;
+
+          results.push({
+            ticker: stock.ticker,
+            name: stock.keyword,
+            title: title.replace(/ - .*$/, '').trim(),
+            sentiment, score,
+            time: timeStr,
+            source: source.trim(),
+            link,
+          });
+        });
+        if(results.filter(r=>r.ticker===stock.ticker).length > 0) break;
+      } catch(e) { continue; }
+    }
+    await new Promise(r => setTimeout(r, 200));
+  }
+
+  if(results.length > 0) {
+    NEWS_DATA = results.sort((a,b) => {
+      const timeA = a.time.includes('분') ? parseInt(a.time) : parseInt(a.time)*60;
+      const timeB = b.time.includes('분') ? parseInt(b.time) : parseInt(b.time)*60;
+      return timeA - timeB;
+    });
+    newsLoaded = true;
+    renderNews(NEWS_DATA);
+    console.log(`✅ 실제 뉴스 ${NEWS_DATA.length}건 로드`);
+  } else {
+    // 실패 시 안내
+    if(newsList) newsList.innerHTML = `
+      <div style="text-align:center;padding:40px;color:var(--text3)">
+        <div style="font-size:32px;margin-bottom:12px">📰</div>
+        <div style="font-size:14px;font-weight:600;color:var(--text2);margin-bottom:8px">뉴스 로드 실패</div>
+        <div style="font-size:12px;line-height:1.7">CORS 제한으로 직접 접근이 차단됐어요.<br>
+        GitHub Actions에서 뉴스를 수집하거나<br>
+        아래 링크에서 직접 확인하세요.</div>
+        <div style="display:flex;gap:8px;justify-content:center;margin-top:16px;flex-wrap:wrap">
+          <a href="https://finance.naver.com" target="_blank" style="font-size:12px;color:var(--accent)">네이버 금융</a>
+          <a href="https://news.google.com/search?q=주식+코스피" target="_blank" style="font-size:12px;color:var(--accent)">Google 뉴스</a>
+        </div>
+      </div>`;
+  }
+
+  if(btn) { btn.textContent = '🔄 새로고침'; btn.disabled = false; }
+}
+
+// ── Claude AI 감성 분석 (뉴스 제목 → 감성 판단) ──
+async function analyzeNewsSentiment(newsItems) {
+  if(!newsItems.length) return newsItems;
+  const titles = newsItems.map(n => `${n.name}: ${n.title}`).join('\n');
+  const prompt = `다음 뉴스 제목들의 감성을 분석해주세요. 각 뉴스를 pos(긍정)/neg(부정)/neu(중립)로 분류하고 -100~+100 점수를 매겨주세요.
+  
+${titles}
+
+JSON 배열로만 응답하세요: [{"idx":0,"sentiment":"pos","score":75}, ...]`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:500,messages:[{role:'user',content:prompt}]})
+    });
+    const data = await res.json();
+    const text = data.content?.[0]?.text || '[]';
+    const clean = text.replace(/```json|```/g,'').trim();
+    const parsed = JSON.parse(clean);
+    parsed.forEach(p => {
+      if(newsItems[p.idx]) {
+        newsItems[p.idx].sentiment = p.sentiment;
+        newsItems[p.idx].score = p.score;
+      }
+    });
+  } catch(e) {}
+  return newsItems;
+}
 
 function renderNews(data) {
+  if(!data || !data.length) {
+    document.getElementById('news-list').innerHTML = `<div class="empty-state" style="padding:40px">
+      <div class="empty-state-icon">📰</div>
+      <div class="empty-state-text" style="margin-bottom:12px">실제 뉴스를 불러오세요</div>
+      <button onclick="loadRealNews()" style="background:var(--accent);color:#fff;border:none;padding:8px 20px;border-radius:8px;cursor:pointer;font-family:var(--sans);font-size:13px">
+        뉴스 로드하기
+      </button>
+    </div>`;
+    ['news-pos','news-neg','news-neu','news-score'].forEach(id=>{
+      const el=document.getElementById(id); if(el) el.textContent='—';
+    });
+    return;
+  }
   const pos = data.filter(n=>n.sentiment==='pos').length;
   const neg = data.filter(n=>n.sentiment==='neg').length;
   const neu = data.filter(n=>n.sentiment==='neu').length;
@@ -3125,17 +3164,16 @@ function filterNews(type, btn) {
 // ═══════════════════════════════════════════
 // 공시 캘린더
 // ═══════════════════════════════════════════
-const CALENDAR_EVENTS = [
-  { date:'2025-06-24', ticker:'삼성전자', name:'삼성전자', event:'실적발표', eps:'8,450원', epsChg:'+12%', whaleHold:'국민연금 8.41%' },
-  { date:'2025-06-25', ticker:'000660', name:'SK하이닉스', event:'주주총회', eps:'—', epsChg:'—', whaleHold:'블랙록 5.02%' },
-  { date:'2025-06-27', ticker:'NVDA', name:'NVIDIA', event:'실적발표', eps:'$0.68', epsChg:'+245%', whaleHold:'국민연금 $2.4B' },
-  { date:'2025-06-30', ticker:'005380', name:'현대차', event:'배당기준일', eps:'6,000원', epsChg:'+5%', whaleHold:'국민연금 8.23%' },
-  { date:'2025-07-03', ticker:'AAPL', name:'Apple', event:'실적발표', eps:'$1.43', epsChg:'+8%', whaleHold:'버핏 5.83%' },
-  { date:'2025-07-08', ticker:'051910', name:'LG화학', event:'실적발표', eps:'3,200원', epsChg:'-22%', whaleHold:'싱가포르투자청 5.12%' },
-  { date:'2025-07-10', ticker:'META', name:'Meta', event:'실적발표', eps:'$5.21', epsChg:'+31%', whaleHold:'테퍼 11.2%' },
-];
+// 공시 캘린더 — data/calendar.json에서 로드
+const CALENDAR_EVENTS = [];
 
 function renderCalendar() {
+  if(!CALENDAR_EVENTS.length) {
+    renderEmpty('cal-tbody', 6, 'GitHub Actions 실행 후 공시 캘린더 데이터가 로드됩니다');
+    const calGrid = document.getElementById('cal-grid');
+    if(calGrid) calGrid.innerHTML = '<div style="grid-column:1/-1;padding:20px;text-align:center;color:var(--text3);font-size:13px">캘린더 데이터 없음</div>';
+    return;
+  }
   // 캘린더 그리드 (2025년 6월)
   const days = ['일','월','화','수','목','금','토'];
   let calHtml = days.map(d=>`<div style="text-align:center;font-size:11px;color:var(--text3);font-family:var(--mono);padding:4px">${d}</div>`).join('');
@@ -3178,20 +3216,19 @@ function renderCalendar() {
 // ═══════════════════════════════════════════
 // 내부자 거래 (SEC Form 4 + DART)
 // ═══════════════════════════════════════════
-const INSIDER_DATA = [
-  { ticker:'NVDA', name:'NVIDIA', person:'Jensen Huang', role:'CEO', type:'buy', shares:50000, amount:'$6.74M', date:'2025-06-20', signal:true },
-  { ticker:'AAPL', name:'Apple', person:'Tim Cook', role:'CEO', type:'sell', shares:511000, amount:'$109M', date:'2025-06-18', signal:false },
-  { ticker:'005930', name:'삼성전자', person:'이재용', role:'회장', type:'buy', shares:200000, amount:'142억원', date:'2025-06-15', signal:true },
-  { ticker:'META', name:'Meta', person:'Mark Zuckerberg', role:'CEO', type:'sell', shares:750000, amount:'$459M', date:'2025-06-12', signal:false },
-  { ticker:'000660', name:'SK하이닉스', person:'곽노정', role:'CEO', type:'buy', shares:5000, amount:'96억원', date:'2025-06-10', signal:true },
-  { ticker:'TSLA', name:'Tesla', person:'Elon Musk', role:'CEO', type:'buy', shares:1750000, amount:'$435M', date:'2025-06-08', signal:true },
-  { ticker:'051910', name:'LG화학', person:'신학철', role:'부회장', type:'sell', shares:3000, amount:'9.4억원', date:'2025-06-05', signal:false },
-  { ticker:'MSFT', name:'Microsoft', person:'Satya Nadella', role:'CEO', type:'sell', shares:100000, amount:'$44.8M', date:'2025-06-03', signal:false },
-];
+// 내부자 거래 — data/insider.json에서 로드
+const INSIDER_DATA = [];
 
 let insiderFilter = 'all';
 
 function renderInsider(data) {
+  if(!data.length) {
+    renderEmpty('insider-tbody', 8, 'GitHub Actions 실행 후 내부자 거래 데이터가 로드됩니다');
+    document.getElementById('ins-buy').textContent = '0';
+    document.getElementById('ins-sell').textContent = '0';
+    document.getElementById('ins-both').textContent = '0개';
+    return;
+  }
   const buy = data.filter(d=>d.type==='buy').length;
   const sell = data.filter(d=>d.type==='sell').length;
   const both = data.filter(d=>d.signal).length;
@@ -3233,14 +3270,8 @@ function filterInsider(type, btn) {
 // ═══════════════════════════════════════════
 // 수급 분석 데이터 & 함수
 // ═══════════════════════════════════════════
-const PENSION_DATA = [
-  {ticker:'005930',name:'삼성전자',nps:+1203,teachers:+234,govt:+189,post:+78,total:+1704,signal:true},
-  {ticker:'000660',name:'SK하이닉스',nps:+892,teachers:+123,govt:+98,post:+45,total:+1158,signal:true},
-  {ticker:'005380',name:'현대차',nps:-234,teachers:+89,govt:+67,post:+23,total:-55,signal:false},
-  {ticker:'051910',name:'LG화학',nps:+445,teachers:+67,govt:+54,post:-12,total:+554,signal:true},
-  {ticker:'035420',name:'NAVER',nps:-189,teachers:-45,govt:-34,post:-18,total:-286,signal:false},
-  {ticker:'006400',name:'삼성SDI',nps:+321,teachers:+54,govt:+43,post:+19,total:+437,signal:true},
-];
+// 연기금 수급 — data/pension.json에서 로드
+const PENSION_DATA = [];
 const SHORT_DATA = [
   {name:'삼성전자',short:1.2,prev:1.8,chg:-0.6},
   {name:'SK하이닉스',short:0.8,prev:1.2,chg:-0.4},
@@ -3266,6 +3297,10 @@ const FOREIGN_LIMIT = [
 function renderSupply() {
   const tb = document.getElementById('pension-tbody');
   if(!tb) return;
+  if(!PENSION_DATA.length) {
+    renderEmpty('pension-tbody', 7, 'GitHub Actions 실행 후 연기금 수급 데이터가 로드됩니다');
+    return;
+  }
   tb.innerHTML = PENSION_DATA.map(d=>`
     <tr style="${d.signal?'background:rgba(16,185,129,0.04)':''}">
       <td><span class="ticker">${d.ticker}</span><br><span style="font-size:12px;color:var(--text2)">${d.name}</span></td>
@@ -3317,22 +3352,19 @@ function renderSupply() {
 // ═══════════════════════════════════════════
 // 밸류에이션 데이터 & 함수
 // ═══════════════════════════════════════════
-const VALUATION_DATA = [
-  {ticker:'005930',name:'삼성전자',price:71400,per:13.2,pbr:1.1,roe:8.4,div:2.8,divDate:'2025-12-31',tag:'cheap'},
-  {ticker:'000660',name:'SK하이닉스',price:192500,per:9.8,pbr:1.8,roe:18.4,div:0.8,divDate:'2025-12-31',tag:'growth'},
-  {ticker:'005380',name:'현대차',price:243000,per:5.2,pbr:0.6,roe:11.2,div:5.1,divDate:'2025-12-31',tag:'cheap'},
-  {ticker:'051910',name:'LG화학',price:312000,per:22.1,pbr:0.9,roe:4.1,div:1.2,divDate:'2025-12-31',tag:'neutral'},
-  {ticker:'035420',name:'NAVER',price:172500,per:28.4,pbr:1.4,roe:4.9,div:0.4,divDate:'2025-12-31',tag:'growth'},
-  {ticker:'006400',name:'삼성SDI',price:248000,per:31.2,pbr:0.8,roe:2.6,div:0.9,divDate:'2025-12-31',tag:'neutral'},
-  {ticker:'105560',name:'KB금융',price:89400,per:6.1,pbr:0.7,roe:11.4,div:6.2,divDate:'2025-03-31',tag:'dividend'},
-  {ticker:'055550',name:'신한지주',price:54300,per:5.8,pbr:0.6,roe:10.2,div:5.8,divDate:'2025-03-31',tag:'dividend'},
-];
+// 밸류에이션 — Yahoo Finance에서 동적 로드
+const VALUATION_DATA = [];
 
 let valFilter = 'all';
 
 function renderValuation(data) {
   const hm = document.getElementById('per-heatmap');
   if(!hm) return;
+  if(!data || !data.length) {
+    hm.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px;grid-column:1/-1">가격 데이터 로딩 중...</div>';
+    renderEmpty('valuation-tbody', 9, '실시간 가격 로드 중... 잠시 기다려주세요');
+    return;
+  }
   const perColors = ['#059669','#10b981','#34d399','#fbbf24','#f59e0b','#ef4444'];
   hm.innerHTML = data.map(d=>{
     const idx = Math.min(Math.floor(d.per/10),5);
@@ -3420,6 +3452,24 @@ const FEAR_GREED = {
     {name:'외국인 순매수',score:55,desc:'소폭 매수'},
   ]
 };
+// 섹터 데이터 동적 계산
+function calcSectorData() {
+  const sectorMap = {
+    '반도체': ['005930','000660','042700'],
+    '자동차': ['005380','000270'],
+    '바이오': ['207940','068270'],
+    '금융':   ['105560','055550','086790'],
+    '2차전지':['006400','373220'],
+    'IT':     ['035420','035720'],
+    '화학':   ['051910','096770'],
+  };
+  return Object.entries(sectorMap).map(([name, tickers])=>{
+    const prices = tickers.map(t=>priceCache[t]).filter(Boolean);
+    const avgChg = prices.length ? prices.reduce((s,p)=>s+(p.chgPct||0),0)/prices.length : (Math.random()-0.5)*3;
+    const vol = prices.length ? prices.reduce((s,p)=>s+(p.vol||0),0)/1000000 : Math.random()*5+1;
+    return {name, chg:parseFloat(avgChg.toFixed(2)), volume:Math.round(vol*100)||1000};
+  });
+}
 const SECTOR_DATA = [
   {name:'반도체',chg:+2.3,volume:8900},
   {name:'자동차',chg:+0.8,volume:3200},
@@ -3429,18 +3479,13 @@ const SECTOR_DATA = [
   {name:'IT',chg:+1.1,volume:5200},
   {name:'화학',chg:-0.5,volume:1800},
 ];
-const FUTURES_DATA = {
-  labels:['6/3','6/5','6/9','6/11','6/13','6/17','6/19','6/23'],
-  positions:[-12400,-9800,-7200,-4100,-1800,+2300,+5600,+8900],
-};
-const CORRELATION_DATA = {
-  labels:['6/3','6/5','6/9','6/11','6/13','6/17','6/19','6/23'],
-  usd:[1381,1385,1388,1384,1390,1386,1382,1384],
-  kospi:[2620,2608,2595,2610,2585,2598,2614,2628],
-};
+// 선물 포지션 — data/futures.json에서 로드
+const FUTURES_DATA = {labels:[], positions:[]};
+// 환율-코스피 상관관계 — 실시간 계산
+const CORRELATION_DATA = {labels:[], usd:[], kospi:[]};
 
 function renderMacro() {
-  const fg = FEAR_GREED;
+  const fg = Object.values(priceCache).length>=3 ? calcFearGreed() : FEAR_GREED;
   const fgScore = document.getElementById('fg-score');
   if(!fgScore) return;
   fgScore.textContent = fg.score;
@@ -3461,15 +3506,23 @@ function renderMacro() {
     </div>`).join('');
 
   destroyChart('sector');
+  const liveSectorData = Object.values(priceCache).length>=3 ? calcSectorData() : [];
+  if(!liveSectorData.length) { const sc=document.getElementById('chart-sector'); if(sc){const sctx=sc.getContext('2d');sctx.clearRect(0,0,sc.width,sc.height);sctx.fillStyle='var(--text3)';sctx.font='13px sans-serif';sctx.textAlign='center';sctx.fillText('가격 로딩 중...',sc.width/2,sc.height/2);} } else
   chartInstances['sector'] = new Chart(document.getElementById('chart-sector'),{
     type:'bar',
-    data:{labels:SECTOR_DATA.map(d=>d.name),datasets:[{label:'등락률(%)',data:SECTOR_DATA.map(d=>d.chg),
+    data:{labels:liveSectorData.map(d=>d.name),datasets:[{label:'등락률(%)',data:liveSectorData.map(d=>d.chg),
       backgroundColor:SECTOR_DATA.map(d=>d.chg>0?'rgba(5,150,105,0.8)':'rgba(220,38,38,0.8)'),borderRadius:4}]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
       scales:{x:{grid:{display:false}},y:{grid:{color:'#e2e8f0'},ticks:{callback:v=>v+'%'}}}}
   });
 
   destroyChart('futures');
+  if(!FUTURES_DATA.labels || !FUTURES_DATA.labels.length) {
+    const fc = document.getElementById('chart-futures');
+    if(fc) { const ctx = fc.getContext('2d'); ctx.clearRect(0,0,fc.width,fc.height);
+      ctx.fillStyle = 'var(--text3)'; ctx.font = '13px sans-serif'; ctx.textAlign='center';
+      ctx.fillText('GitHub Actions 실행 후 데이터 표시', fc.width/2, fc.height/2); }
+  } else
   chartInstances['futures'] = new Chart(document.getElementById('chart-futures'),{
     type:'line',
     data:{labels:FUTURES_DATA.labels,datasets:[{label:'외국인 선물(계약)',data:FUTURES_DATA.positions,
@@ -3480,6 +3533,12 @@ function renderMacro() {
   });
 
   destroyChart('correlation');
+  if(!CORRELATION_DATA.labels || !CORRELATION_DATA.labels.length) {
+    const cc = document.getElementById('chart-correlation');
+    if(cc) { const ctx2 = cc.getContext('2d'); ctx2.clearRect(0,0,cc.width,cc.height);
+      ctx2.fillStyle = 'var(--text3)'; ctx2.font = '13px sans-serif'; ctx2.textAlign='center';
+      ctx2.fillText('GitHub Actions 실행 후 데이터 표시', cc.width/2, cc.height/2); }
+  } else
   chartInstances['correlation'] = new Chart(document.getElementById('chart-correlation'),{
     type:'line',
     data:{labels:CORRELATION_DATA.labels,datasets:[
@@ -3498,16 +3557,8 @@ function renderMacro() {
 // ═══════════════════════════════════════════
 // AI 종합 스코어 데이터 & 함수
 // ═══════════════════════════════════════════
-const BASE_SCORES = [
-  {ticker:'005930',name:'삼성전자',whale:90,insider:80,news:82,supply:85,value:75},
-  {ticker:'000660',name:'SK하이닉스',whale:85,insider:70,news:91,supply:80,value:70},
-  {ticker:'005380',name:'현대차',whale:65,insider:55,news:50,supply:60,value:88},
-  {ticker:'051910',name:'LG화학',whale:75,insider:60,news:58,supply:70,value:65},
-  {ticker:'035420',name:'NAVER',whale:30,insider:40,news:25,supply:35,value:55},
-  {ticker:'006400',name:'삼성SDI',whale:72,insider:55,news:45,supply:68,value:60},
-  {ticker:'105560',name:'KB금융',whale:60,insider:50,news:55,supply:62,value:82},
-  {ticker:'055550',name:'신한지주',whale:58,insider:48,news:52,supply:60,value:80},
-];
+// AI 스코어 — 실시간 계산
+const BASE_SCORES = [];
 
 let watchStocks = [];
 try { watchStocks = JSON.parse(localStorage.getItem('watchStocks')||'[]'); } catch(e){}
@@ -3517,6 +3568,11 @@ function calcScore(s){ return Math.round(s.whale*0.3+s.insider*0.2+s.news*0.2+s.
 function renderScores() {
   const tb = document.getElementById('score-tbody');
   if(!tb) return;
+  buildBaseScores(); // 없으면 동적 생성
+  if(!BASE_SCORES.length) {
+    renderEmpty('score-tbody', 8, '실시간 데이터 로드 후 스코어가 계산됩니다');
+    return;
+  }
   const scored = BASE_SCORES.map(s=>({...s,total:calcScore(s)})).sort((a,b)=>b.total-a.total);
 
   document.getElementById('score-strong').textContent = scored.filter(s=>s.total>=80).length;
@@ -3599,33 +3655,11 @@ document.head.appendChild(_style);
 // ═══════════════════════════════════════════
 // 종목 차트 모달
 // ═══════════════════════════════════════════
-const STOCK_INFO = {
-  '005930': { name:'삼성전자', price:71400, chg:+600, chgPct:+0.85, open:70900, high:71800, low:70600, vol:'2,341만주', high52:88800, cap:'425조', per:13.2, div:2.8 },
-  '000660': { name:'SK하이닉스', price:192500, chg:+4500, chgPct:+2.39, open:188500, high:193200, low:188000, vol:'489만주', high52:238500, cap:'139조', per:9.8, div:0.8 },
-  '005380': { name:'현대차', price:243000, chg:+2500, chgPct:+1.04, open:241000, high:244500, low:240500, vol:'312만주', high52:287500, cap:'51조', per:5.2, div:5.1 },
-  '051910': { name:'LG화학', price:312000, chg:-3000, chgPct:-0.95, open:315500, high:316000, low:311000, vol:'78만주', high52:489000, cap:'22조', per:22.1, div:1.2 },
-  '035420': { name:'NAVER', price:172500, chg:-1500, chgPct:-0.86, open:174000, high:174200, low:172000, vol:'134만주', high52:248500, cap:'28조', per:28.4, div:0.4 },
-  '006400': { name:'삼성SDI', price:248000, chg:+3000, chgPct:+1.22, open:245500, high:249000, low:245000, vol:'67만주', high52:498000, cap:'17조', per:31.2, div:0.9 },
-  '105560': { name:'KB금융', price:89400, chg:+400, chgPct:+0.45, open:89100, high:89800, low:88900, vol:'198만주', high52:98500, cap:'36조', per:6.1, div:6.2 },
-  '055550': { name:'신한지주', price:54300, chg:+200, chgPct:+0.37, open:54100, high:54600, low:54000, vol:'167만주', high52:59800, cap:'27조', per:5.8, div:5.8 },
-  'AAPL':   { name:'Apple', price:213.49, chg:+2.29, chgPct:+1.08, open:211.80, high:214.20, low:211.50, vol:'58.3M', high52:237.49, cap:'$3.27T', per:32.1, div:0.5 },
-  'MSFT':   { name:'Microsoft', price:448.20, chg:+2.90, chgPct:+0.65, open:446.00, high:449.50, low:445.80, vol:'18.2M', high52:468.35, cap:'$3.33T', per:35.2, div:0.7 },
-  'NVDA':   { name:'NVIDIA', price:134.80, chg:+3.42, chgPct:+2.60, open:131.90, high:135.40, low:131.50, vol:'312M', high52:153.13, cap:'$3.30T', per:38.4, div:0.0 },
-  'AMZN':   { name:'Amazon', price:223.75, chg:+1.85, chgPct:+0.83, open:222.30, high:224.50, low:221.90, vol:'34.1M', high52:242.52, cap:'$2.37T', per:42.1, div:0.0 },
-  'META':   { name:'Meta', price:612.30, chg:+3.85, chgPct:+0.63, open:609.00, high:614.20, low:608.40, vol:'9.8M', high52:638.40, cap:'$1.55T', per:25.3, div:0.4 },
-  'TSLA':   { name:'Tesla', price:248.90, chg:-3.20, chgPct:-1.27, open:252.30, high:253.10, low:248.20, vol:'89.4M', high52:358.64, cap:'$799B', per:61.2, div:0.0 },
-};
+// 종목 정보 — Yahoo Finance에서 동적 로드
+const STOCK_INFO = {};
 
-const WHALE_BADGES = {
-  '005930': ['국민연금 8.41%▲','블랙록 4.23%','뱅가드 3.91%'],
-  '000660': ['블랙록 5.02%▲','국민연금 6.72%▼','SK(주) 20.07%'],
-  '005380': ['국민연금 8.23%▲','뱅가드 6.89%▲','블랙록 3.12%▼'],
-  '051910': ['싱가포르투자청 5.12%★','국민연금 10.34%▲'],
-  '035420': ['국민연금 9.98%▼'],
-  'AAPL':   ['버핏 5.83%','뱅가드 8.91%▲','국민연금 0.21%▲'],
-  'NVDA':   ['테퍼 0.08%▲','소로스 0.04%★','국민연금 0.09%▲'],
-  'TSLA':   ['테퍼 0.12%▼','소로스 0.03%▼','국민연금 0.07%▼'],
-};
+// 고래 뱃지 — DART 데이터 기반 동적 생성
+const WHALE_BADGES = {};
 
 let currentTicker = null;
 let currentPeriod = '1m';
@@ -3735,8 +3769,10 @@ function changePeriod(p, btn) {
   currentPeriod = p;
   document.querySelectorAll('#period-btns .period-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
-  Object.values(modalCharts).forEach(c=>c&&c.destroy());
+  Object.values(modalCharts).forEach(c=>{ try{c&&c.destroy()}catch(e){} });
   modalCharts = {};
+  // 캐시 무효화 후 재로드
+  delete chartDataCache[currentTicker + '_' + p];
   renderModalChart();
 }
 
@@ -3744,7 +3780,7 @@ function changeChartType(t, btn) {
   currentChartType = t;
   document.querySelectorAll('#type-btns .period-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
-  Object.values(modalCharts).forEach(c=>c&&c.destroy());
+  Object.values(modalCharts).forEach(c=>{ try{c&&c.destroy()}catch(e){} });
   modalCharts = {};
   renderModalChart();
 }
@@ -3791,23 +3827,60 @@ function renderModalChart() {
     return `<span class="change-badge ${cls}" style="font-size:11px">${b}</span>`;
   }).join('');
 
-  // 데이터 생성
-  const dayMap = {'1d':1,'1w':7,'1m':30,'3m':90,'1y':252};
-  const days = dayMap[currentPeriod]||30;
-  const basePrice = info.price||50000;
-  const {data:ohlc, labels} = currentPeriod==='1d'
-    ? generateIntraday(basePrice)
-    : generateOHLC(basePrice, days);
+  // ── 실제 데이터 로드 (Yahoo Finance) ──
+  const mainCtxEl = document.getElementById('modal-main-chart');
+  mainCtxEl.style.opacity = '0.3';
 
-  const closes = ohlc.map(d=>d.c);
-  const ma5   = calcMA(ohlc,5);
-  const ma20  = calcMA(ohlc,20);
-  const ma60  = calcMA(ohlc,60);
-  const bb    = calcBB(ohlc);
-  const rsi   = calcRSI(ohlc);
-  const macdData = calcMACD(ohlc);
+  // 로딩 표시
+  const loadingDiv = document.createElement('div');
+  loadingDiv.id = 'chart-loading-overlay';
+  loadingDiv.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);display:flex;align-items:center;gap:8px;color:var(--text3);font-size:13px;z-index:10';
+  loadingDiv.innerHTML = '<div class="ai-spinner" style="width:16px;height:16px;border-width:2px"></div> 차트 데이터 로딩 중...';
+  mainCtxEl.parentElement.style.position = 'relative';
+  mainCtxEl.parentElement.appendChild(loadingDiv);
 
-  const upColor   = '#10b981';
+  // 실제 데이터 비동기 로드
+  fetchRealChartData(currentTicker, currentPeriod).then(realData => {
+    // 로딩 오버레이 제거
+    const overlay = document.getElementById('chart-loading-overlay');
+    if(overlay) overlay.remove();
+    mainCtxEl.style.opacity = '1';
+
+    let ohlc, labels;
+    if(realData && realData.data.length > 0) {
+      ohlc = realData.data;
+      labels = realData.labels;
+
+      // 헤더 정보 실제 데이터로 업데이트
+      const updatedInfo = STOCK_INFO[currentTicker] || {};
+      const fmt2 = v => isUS ? '$'+parseFloat(v).toFixed(2) : Math.round(v).toLocaleString()+'원';
+      if(updatedInfo.price) {
+        document.getElementById('modal-price').textContent = fmt2(updatedInfo.price);
+        document.getElementById('info-open').textContent = fmt2(updatedInfo.open||0);
+        document.getElementById('info-high').textContent = fmt2(updatedInfo.high||0);
+        document.getElementById('info-low').textContent  = fmt2(updatedInfo.low||0);
+        if(updatedInfo.vol)    document.getElementById('info-vol').textContent    = updatedInfo.vol;
+        if(updatedInfo.high52) document.getElementById('info-high52').textContent = fmt2(updatedInfo.high52);
+      }
+    } else {
+      // Yahoo 실패 시 시뮬레이션 fallback
+      const dayMap2 = {'1d':1,'1w':7,'1m':30,'3m':90,'1y':252};
+      const days2 = dayMap2[currentPeriod]||30;
+      const basePrice2 = info.price||50000;
+      const result2 = currentPeriod==='1d' ? generateIntraday(basePrice2) : generateOHLC(basePrice2, days2);
+      ohlc = result2.data;
+      labels = result2.labels;
+    }
+
+    _drawChart(ohlc, labels, isUS, fmt);
+  });
+
+  return; // 비동기라 여기서 리턴
+}
+
+// ── 실제 차트 그리기 함수 (분리) ──
+function _drawChart(ohlc, labels, isUS, fmt) {
+  const upColor = '#10b981';
   const downColor = '#ef4444';
   const gridColor = '#e2e8f0';
 
@@ -4079,19 +4152,8 @@ document.addEventListener('keydown', e => {
 // 매수·매도 신호 분석 엔진
 // ═══════════════════════════════════════════
 
-const SIGNAL_STOCKS = [
-  { ticker:'005930', name:'삼성전자',   market:'KR', price:71400,  prev:70800 },
-  { ticker:'000660', name:'SK하이닉스', market:'KR', price:192500, prev:188000 },
-  { ticker:'005380', name:'현대차',     market:'KR', price:243000, prev:240500 },
-  { ticker:'051910', name:'LG화학',     market:'KR', price:312000, prev:315000 },
-  { ticker:'035420', name:'NAVER',      market:'KR', price:172500, prev:174000 },
-  { ticker:'006400', name:'삼성SDI',    market:'KR', price:248000, prev:245000 },
-  { ticker:'105560', name:'KB금융',     market:'KR', price:89400,  prev:89000  },
-  { ticker:'AAPL',   name:'Apple',      market:'US', price:213.49, prev:211.20 },
-  { ticker:'NVDA',   name:'NVIDIA',     market:'US', price:134.80, prev:131.38 },
-  { ticker:'TSLA',   name:'Tesla',      market:'US', price:248.90, prev:252.10 },
-  { ticker:'META',   name:'Meta',       market:'US', price:612.30, prev:608.45 },
-];
+// AI 분석 대상 — ALL_TRACKED 기반 실시간
+const SIGNAL_STOCKS = ALL_TRACKED.slice(0,11).map(s=>({...s, price: getPrice(s.ticker).price||0, prev: getPrice(s.ticker).prev||0}));
 
 let signalResults = [];
 let signalFilter = 'all';
@@ -4718,7 +4780,7 @@ function switchTab(name, btnEl) {
   };
   if(tickersByTab[name]) queuePriceLoad(tickersByTab[name]);
   if(name==='nps') { renderNpsKr(); renderNpsCharts(); }
-  if(name==='news') renderNews(NEWS_DATA);
+  if(name==='news') { if(!newsLoaded) loadRealNews(); else renderNews(NEWS_DATA); }
   if(name==='calendar') renderCalendar();
   if(name==='insider') renderInsider(INSIDER_DATA);
   if(name==='supply') renderSupply();
@@ -4733,6 +4795,352 @@ function switchTab(name, btnEl) {
 }
 
 
+
+
+
+
+// ═══════════════════════════════════════════
+// GitHub Actions 데이터 자동 로드
+// ═══════════════════════════════════════════
+async function loadGithubData() {
+  const files = [
+    { url:'data/dart_holdings.json', key:'DART' },
+    { url:'data/nps_kr.json',        key:'NPS_KR' },
+    { url:'data/nps_us.json',        key:'NPS_US' },
+    { url:'data/legends.json',       key:'LEGENDS' },
+    { url:'data/krx_today.json',     key:'KRX' },
+    { url:'data/whale_stocks.json',  key:'WHALE' },
+    { url:'data/insider.json',       key:'INSIDER' },
+    { url:'data/pension.json',       key:'PENSION' },
+    { url:'data/calendar.json',      key:'CALENDAR' },
+    { url:'data/futures.json',       key:'FUTURES' },
+  ];
+
+  let loaded = 0;
+  for(const f of files) {
+    try {
+      const res = await fetch(f.url + '?t=' + Date.now());
+      if(!res.ok) continue;
+      const d = await res.json();
+
+      if(f.key==='DART'     && d.data)    { DART_DATA.push(...d.data); renderDart(DART_DATA); renderDartCharts(DART_DATA); }
+      if(f.key==='NPS_KR'   && d.data)    { NPS_KR_DATA.push(...d.data); renderNpsKr(); renderNpsCharts(); }
+      if(f.key==='NPS_US'   && d.data)    { NPS_US_DATA.push(...d.data); renderNpsUs(); }
+      if(f.key==='LEGENDS'  && d.data)    { LEGENDS_DATA.push(...d.data); renderLegends(); renderLegendsCharts(); }
+      if(f.key==='KRX'      && d.data)    { KRX_DATA = d.data; updateKrxStats(); renderKrxTable(KRX_DATA); renderKrxCharts(KRX_DATA); }
+      if(f.key==='WHALE'    && d.stocks)  { Object.assign(WHALE_STOCK_DATA, d.stocks); }
+      if(f.key==='INSIDER'  && d.data)    { INSIDER_DATA.push(...d.data); }
+      if(f.key==='PENSION'  && d.data)    { PENSION_DATA.push(...d.data); }
+      if(f.key==='CALENDAR' && d.data)    { CALENDAR_EVENTS.push(...d.data); }
+      if(f.key==='FUTURES'  && d.labels)  { Object.assign(FUTURES_DATA, d); }
+      loaded++;
+    } catch(e) { /* 파일 없으면 스킵 */ }
+  }
+
+  if(loaded > 0) console.log(`✅ GitHub Actions 데이터 ${loaded}개 로드`);
+  else console.log('ℹ️ GitHub Actions 데이터 없음 — Actions 실행 필요');
+}
+
+// 빈 상태 렌더러 (데이터 없을 때)
+function renderEmpty(tbodyId, colCount, message, actionBtn='') {
+  const el = document.getElementById(tbodyId);
+  if(!el) return;
+  el.innerHTML = `<tr><td colspan="${colCount}">
+    <div class="empty-state">
+      <div class="empty-state-icon">📭</div>
+      <div class="empty-state-text" style="margin-bottom:12px">${message}</div>
+      ${actionBtn}
+    </div>
+  </td></tr>`;
+}
+
+// 밸류에이션 데이터 — Yahoo Finance에서 동적 빌드
+async function buildValuationData() {
+  if(VALUATION_DATA.length > 0) return;
+  const tickers = ['005930','000660','005380','051910','035420','006400','105560','055550'];
+  for(const ticker of tickers) {
+    const p = getPrice(ticker);
+    if(!p.price) continue;
+    const info = STOCK_INFO[ticker] || {};
+    VALUATION_DATA.push({
+      ticker,
+      name:    info.name || PRICE_MASTER[ticker]?.name || ticker,
+      price:   p.price,
+      per:     info.per  || 0,
+      pbr:     info.pbr  || 0,
+      roe:     info.roe  || 0,
+      div:     info.div  || 0,
+      divDate: '—',
+      tag:     info.per < 10 && info.pbr < 1 ? 'cheap' : info.div >= 5 ? 'dividend' : 'neutral',
+    });
+  }
+}
+
+// BASE_SCORES — priceCache 기반 동적 계산
+function buildBaseScores() {
+  if(BASE_SCORES.length > 0) return;
+  const tickers = ['005930','000660','005380','051910','035420','006400','105560','055550'];
+  tickers.forEach(ticker => {
+    const p = getPrice(ticker);
+    const dartItem = DART_DATA.find(d=>d.ticker===ticker);
+    const whaleArr = WHALE_STOCK_DATA[PRICE_MASTER[ticker]?.name] || [];
+    const whaleBuy = whaleArr.filter(w=>w.chgType==='up').length;
+    const newsItem = NEWS_DATA.find(n=>n.ticker===ticker||n.name===PRICE_MASTER[ticker]?.name);
+    BASE_SCORES.push({
+      ticker,
+      name:    PRICE_MASTER[ticker]?.name || ticker,
+      whale:   Math.min(100, 50 + whaleBuy*15),
+      insider: 50,
+      news:    newsItem ? Math.min(100, 50 + newsItem.score) : 50,
+      supply:  50,
+      value:   50,
+    });
+  });
+}
+
+// ═══════════════════════════════════════════
+// 실시간 데이터 자동 로더 (Yahoo Finance)
+// ═══════════════════════════════════════════
+
+// 전체 추적 종목 목록
+const ALL_TRACKED = [
+  // 국내
+  {ticker:'005930',name:'삼성전자',  market:'KOSPI'},
+  {ticker:'000660',name:'SK하이닉스',market:'KOSPI'},
+  {ticker:'005380',name:'현대차',    market:'KOSPI'},
+  {ticker:'051910',name:'LG화학',    market:'KOSPI'},
+  {ticker:'035420',name:'NAVER',     market:'KOSPI'},
+  {ticker:'006400',name:'삼성SDI',   market:'KOSPI'},
+  {ticker:'105560',name:'KB금융',    market:'KOSPI'},
+  {ticker:'055550',name:'신한지주',  market:'KOSPI'},
+  {ticker:'000270',name:'기아',      market:'KOSPI'},
+  {ticker:'068270',name:'셀트리온',  market:'KOSPI'},
+  {ticker:'035720',name:'카카오',    market:'KOSPI'},
+  {ticker:'207940',name:'삼성바이오',market:'KOSPI'},
+  {ticker:'086790',name:'하나금융지주',market:'KOSPI'},
+  {ticker:'373220',name:'LG에너지솔루션',market:'KOSPI'},
+  {ticker:'329180',name:'HD현대중공업',market:'KOSPI'},
+  {ticker:'042700',name:'한미반도체',market:'KOSPI'},
+  {ticker:'003550',name:'LG',        market:'KOSPI'},
+  {ticker:'015760',name:'한국전력',  market:'KOSPI'},
+  // 미국
+  {ticker:'AAPL', name:'Apple',     market:'NASDAQ'},
+  {ticker:'MSFT', name:'Microsoft', market:'NASDAQ'},
+  {ticker:'NVDA', name:'NVIDIA',    market:'NASDAQ'},
+  {ticker:'AMZN', name:'Amazon',    market:'NASDAQ'},
+  {ticker:'META', name:'Meta',      market:'NASDAQ'},
+  {ticker:'TSLA', name:'Tesla',     market:'NASDAQ'},
+  {ticker:'GOOGL',name:'Alphabet',  market:'NASDAQ'},
+  {ticker:'BRK.B',name:'Berkshire', market:'NYSE'},
+  {ticker:'JPM',  name:'JPMorgan',  market:'NYSE'},
+  {ticker:'V',    name:'Visa',      market:'NYSE'},
+];
+
+// Yahoo Finance 실시간 시세 (단일 종목)
+async function fetchYahooQuote(ticker) {
+  const isKR = /^\d+$/.test(ticker);
+  const symbol = isKR ? ticker + '.KS' : ticker;
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?range=1d&interval=1d`;
+  const proxies = [
+    `https://corsproxy.io/?${encodeURIComponent(url)}`,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+    `https://thingproxy.freeboard.io/fetch/${url}`,
+  ];
+  for(const p of proxies) {
+    try {
+      const res = await fetch(p, {signal: AbortSignal.timeout(6000)});
+      const d = await res.json();
+      const meta = d?.chart?.result?.[0]?.meta;
+      if(!meta?.regularMarketPrice) continue;
+      const price = meta.regularMarketPrice;
+      const prev  = meta.previousClose || meta.chartPreviousClose || price;
+      const chg   = price - prev;
+      const chgPct = prev ? (chg/prev*100) : 0;
+      return {
+        price, prev, chg, chgPct,
+        open:  meta.regularMarketOpen     || price,
+        high:  meta.regularMarketDayHigh  || price,
+        low:   meta.regularMarketDayLow   || price,
+        high52:meta.fiftyTwoWeekHigh      || 0,
+        low52: meta.fiftyTwoWeekLow       || 0,
+        vol:   meta.regularMarketVolume   || 0,
+        cap:   meta.marketCap             || 0,
+        name:  meta.longName || meta.shortName || ticker,
+        isKR, symbol, source:'yahoo',
+      };
+    } catch(e) { continue; }
+  }
+  return null;
+}
+
+// 환율 로더
+async function fetchForexRates() {
+  try {
+    const res = await fetch('https://open.er-api.com/v6/latest/USD', {signal:AbortSignal.timeout(5000)});
+    const d = await res.json();
+    if(!d.rates) return null;
+    return {
+      usdKrw: d.rates.KRW || 1384,
+      jpyKrw: (d.rates.KRW||1384)/(d.rates.JPY||150),
+      eurKrw: (d.rates.KRW||1384)/(d.rates.EUR||0.92),
+      updatedAt: d.time_last_update_utc,
+    };
+  } catch(e) { return null; }
+}
+
+// 앱 시작 시 전체 종목 로드 (백그라운드, 순차적)
+let globalDataLoaded = false;
+async function loadAllPrices() {
+  if(globalDataLoaded) return;
+  globalDataLoaded = true;
+
+  // 환율 먼저
+  const fx = await fetchForexRates();
+  if(fx) {
+    const usdEl = document.getElementById('fx-usd');
+    const jpyEl = document.getElementById('fx-jpy');
+    if(usdEl) { usdEl.textContent = Math.round(fx.usdKrw).toLocaleString(); document.getElementById('fx-usd-chg').textContent = 'USD/KRW'; }
+    if(jpyEl) { jpyEl.textContent = fx.jpyKrw.toFixed(2); document.getElementById('fx-jpy-chg').textContent = 'JPY/KRW'; }
+  }
+
+  // BTC
+  fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT')
+    .then(r=>r.json()).then(d=>{
+      const p = parseFloat(d.lastPrice), chg = parseFloat(d.priceChangePercent);
+      const el = document.getElementById('live-btc');
+      if(el) el.textContent = '$' + Math.round(p).toLocaleString();
+      const chgEl = document.getElementById('live-btc-chg');
+      if(chgEl) { chgEl.textContent = (chg>=0?'+':'')+chg.toFixed(2)+'%'; chgEl.style.color=chg>=0?'var(--green)':'var(--red)'; }
+    }).catch(()=>{});
+
+  // 전체 종목 순차 로드 (서버 부하 방지)
+  for(const stock of ALL_TRACKED) {
+    if(priceCache[stock.ticker]) continue;
+    const data = await fetchYahooQuote(stock.ticker);
+    if(data) {
+      priceCache[stock.ticker] = {...data, isKR: /^\d+$/.test(stock.ticker)};
+      // STOCK_INFO 동기화
+      if(!STOCK_INFO[stock.ticker]) STOCK_INFO[stock.ticker] = {};
+      Object.assign(STOCK_INFO[stock.ticker], {
+        name:   data.name || stock.name,
+        price:  data.price,
+        chg:    data.chg,
+        chgPct: data.chgPct,
+        open:   data.open,
+        high:   data.high,
+        low:    data.low,
+        high52: data.high52,
+        vol:    data.vol >= 10000 ? Math.round(data.vol/10000)+'만주' : data.vol.toLocaleString()+'주',
+        cap:    data.cap >= 1e12 ? (data.cap/1e12).toFixed(1)+'조' : data.cap >= 1e8 ? Math.round(data.cap/1e8)+'억' : '—',
+      });
+      // 화면 즉시 갱신
+      refreshPriceElements(stock.ticker);
+      // SIGNAL_STOCKS 가격 업데이트
+      const ss = SIGNAL_STOCKS.find(s=>s.ticker===stock.ticker);
+      if(ss) { ss.prev = ss.price; ss.price = data.price; }
+      // VALUATION_DATA 가격 업데이트
+      const vd = VALUATION_DATA.find(v=>v.ticker===stock.ticker);
+      if(vd) vd.price = data.price;
+    }
+    await new Promise(r=>setTimeout(r, 350));
+  }
+
+  console.log('✅ 전체 종목 실시간 가격 로드 완료');
+  // 업데이트 시각 표시
+  const now = new Date();
+  const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`;
+  document.querySelectorAll('[id="live-updated"]').forEach(el=>
+    el.textContent = `실시간 가격 업데이트: ${timeStr} (Yahoo Finance)`
+  );
+}
+
+// ═══════════════════════════════════════════
+// Yahoo Finance 실제 차트 데이터 로더
+// ═══════════════════════════════════════════
+const chartDataCache = {}; // 차트 데이터 캐시
+
+async function fetchRealChartData(ticker, period) {
+  const cacheKey = `${ticker}_${period}`;
+  if(chartDataCache[cacheKey]) return chartDataCache[cacheKey];
+
+  const isKR = /^\d+$/.test(ticker);
+  const symbol = isKR ? ticker + '.KS' : ticker;
+
+  // 기간별 Yahoo Finance 파라미터
+  const periodMap = {
+    '1d': { range:'1d', interval:'5m'  },
+    '1w': { range:'5d', interval:'1h'  },
+    '1m': { range:'1mo', interval:'1d' },
+    '3m': { range:'3mo', interval:'1d' },
+    '1y': { range:'1y',  interval:'1wk'},
+  };
+  const { range, interval } = periodMap[period] || periodMap['1m'];
+
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?range=${range}&interval=${interval}&includePrePost=false`;
+  const proxies = [
+    `https://corsproxy.io/?${encodeURIComponent(url)}`,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+  ];
+
+  for(const proxyUrl of proxies) {
+    try {
+      const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(8000) });
+      const json = await res.json();
+      const result = json?.chart?.result?.[0];
+      if(!result) continue;
+
+      const timestamps = result.timestamp || [];
+      const quote = result.indicators?.quote?.[0] || {};
+      const opens  = quote.open  || [];
+      const highs  = quote.high  || [];
+      const lows   = quote.low   || [];
+      const closes = quote.close || [];
+      const vols   = quote.volume|| [];
+
+      if(closes.length === 0) continue;
+
+      const data = [], labels = [];
+      timestamps.forEach((ts, i) => {
+        if(!closes[i]) return;
+        const d = new Date(ts * 1000);
+        const isIntraday = interval === '5m' || interval === '1h';
+        const label = isIntraday
+          ? `${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`
+          : `${d.getMonth()+1}/${d.getDate()}`;
+        data.push({
+          o: Math.round(opens[i]  || closes[i]),
+          h: Math.round(highs[i]  || closes[i]),
+          l: Math.round(lows[i]   || closes[i]),
+          c: Math.round(closes[i]),
+          v: vols[i] || 0,
+          ts: ts,
+        });
+        labels.push(label);
+      });
+
+      // 메타 데이터 (헤더 정보 업데이트용)
+      const meta = result.meta || {};
+      const realData = { data, labels, meta, source: 'yahoo' };
+      chartDataCache[cacheKey] = realData;
+
+      // STOCK_INFO 실시간 업데이트
+      if(!STOCK_INFO[ticker]) STOCK_INFO[ticker] = {};
+      STOCK_INFO[ticker].price  = meta.regularMarketPrice || closes[closes.length-1];
+      STOCK_INFO[ticker].open   = meta.regularMarketOpen  || opens[0];
+      STOCK_INFO[ticker].high   = meta.regularMarketDayHigh  || Math.max(...highs.filter(Boolean));
+      STOCK_INFO[ticker].low    = meta.regularMarketDayLow   || Math.min(...lows.filter(Boolean));
+      STOCK_INFO[ticker].high52 = meta.fiftyTwoWeekHigh  || STOCK_INFO[ticker].high52;
+      STOCK_INFO[ticker].vol    = meta.regularMarketVolume
+        ? (meta.regularMarketVolume >= 10000
+          ? Math.round(meta.regularMarketVolume/10000)+'만주'
+          : meta.regularMarketVolume.toLocaleString()+'주')
+        : '—';
+
+      return realData;
+    } catch(e) { continue; }
+  }
+  return null; // 실패 시 null 반환 → 시뮬 fallback
+}
 
 // ═══════════════════════════════════════════
 // 실시간 가격 엔진 — 모든 탭이 공유
@@ -5073,16 +5481,30 @@ function searchItemHTML(s) {
   </div>`;
 }
 
-function selectStock(ticker, name) {
+async function selectStock(ticker, name) {
   hideSearchDropdown();
   document.getElementById('global-search-input').value = '';
-  // 차트 팝업으로 바로 열기
-  openChartModal(ticker);
-  // STOCK_INFO에 없으면 추가
+
+  // 가격 없으면 먼저 로드
+  if(!priceCache[ticker]) {
+    const data = await fetchYahooQuote(ticker);
+    if(data) {
+      priceCache[ticker] = data;
+      if(!STOCK_INFO[ticker]) STOCK_INFO[ticker] = {};
+      Object.assign(STOCK_INFO[ticker], {
+        name: data.name || name || ticker,
+        price: data.price, chg: data.chg, chgPct: data.chgPct,
+        open: data.open, high: data.high, low: data.low,
+        high52: data.high52,
+        vol: data.vol>=10000 ? Math.round(data.vol/10000)+'만주' : data.vol.toLocaleString()+'주',
+      });
+    }
+  }
   if(!STOCK_INFO[ticker]) {
     const db = ALL_STOCKS_DB.find(s=>s.ticker===ticker);
-    if(db) STOCK_INFO[ticker] = { name:db.name, price:db.price, chgPct:0 };
+    STOCK_INFO[ticker] = { name: db?.name||name||ticker, price:0 };
   }
+  openChartModal(ticker);
 }
 
 function hideSearchDropdown() {
@@ -5191,6 +5613,11 @@ function filterValuation(type, btn) {
 // ═══════════════════════════════════════════
 // 초기 렌더링
 // ═══════════════════════════════════════════
+// DART 실제 데이터 로드 시도
+fetch('data/dart_holdings.json')
+  .then(r=>r.json())
+  .then(d=>{ if(d.data && d.data.length>0) { Object.assign(DART_DATA, d.data); renderDart(DART_DATA); renderDartCharts(DART_DATA); }})
+  .catch(()=>{});
 renderDart(DART_DATA);
 renderDartCharts(DART_DATA);
 renderNpsKr();
