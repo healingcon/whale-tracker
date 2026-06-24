@@ -2587,30 +2587,38 @@ function fmt(n, dec=0) {
   return n.toLocaleString('ko-KR', { minimumFractionDigits: dec, maximumFractionDigits: dec });
 }
 
-// ── 네이버금융 국내 주가 (CORS 프록시) ──
-async function fetchNaverPrice(ticker) {
+// ── Yahoo Finance 국내+미국 주가 (CORS 프록시) ──
+async function fetchYahooPrice(ticker) {
+  // 국내: 005930 → 005930.KS, 미국: AAPL → AAPL
+  const symbol = /^\d+$/.test(ticker) ? ticker + '.KS' : ticker;
   const proxies = [
-    `https://corsproxy.io/?https://finance.naver.com/item/main.nhn?code=${ticker}`,
-    `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://finance.naver.com/item/main.nhn?code=${ticker}`)}`,
+    `https://corsproxy.io/?${encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=5d`)}`,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=5d`)}`,
+    `https://thingproxy.freeboard.io/fetch/https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=5d`,
   ];
   for (const url of proxies) {
     try {
-      const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
-      const text = await res.text();
-      // 현재가 파싱
-      const priceMatch = text.match(/id="_nowVal"[^>]*>([\d,]+)</);
-      const prevMatch  = text.match(/id="_cvsPrice"[^>]*>([\d,]+)</);
-      const chgPctMatch= text.match(/id="_rate"[^>]*>[^\d-]*([\d.-]+)/);
-      if (priceMatch) {
-        const price = parseInt(priceMatch[1].replace(/,/g,''));
-        const prev  = prevMatch ? parseInt(prevMatch[1].replace(/,/g,'')) : price;
-        const chgPct= chgPctMatch ? parseFloat(chgPctMatch[1]) : 0;
-        return { price, prev, chgPct, source:'naver' };
-      }
+      const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
+      const d = await res.json();
+      const meta = d?.chart?.result?.[0]?.meta;
+      if (!meta?.regularMarketPrice) continue;
+      const price   = meta.regularMarketPrice;
+      const prev    = meta.previousClose || meta.chartPreviousClose || price;
+      const chg     = price - prev;
+      const chgPct  = prev ? (chg / prev * 100) : 0;
+      const high52  = meta.fiftyTwoWeekHigh || 0;
+      const low52   = meta.fiftyTwoWeekLow || 0;
+      const open    = meta.regularMarketOpen || price;
+      const high    = meta.regularMarketDayHigh || price;
+      const low     = meta.regularMarketDayLow || price;
+      const vol     = meta.regularMarketVolume || 0;
+      return { price, prev, chg, chgPct, high52, low52, open, high, low, vol, source:'yahoo' };
     } catch(e) { continue; }
   }
   return null;
 }
+// 별칭 (기존 코드 호환)
+async function fetchNaverPrice(ticker) { return fetchYahooPrice(ticker); }
 
 // ── Finnhub 미국 주가 ──
 async function fetchFinnhubPrice(ticker) {
@@ -2730,41 +2738,47 @@ async function renderLivePrices() {
   // 미국 종목 (Finnhub)
   const usTbody = document.getElementById('live-us-tbody');
 
-  if (!FINNHUB_KEY) {
-    usTbody.innerHTML = `<tr><td colspan="6" style="padding:20px;text-align:center;color:var(--text3);font-size:13px">
-      ⚠️ Finnhub API 키가 필요해요.<br>
-      <span style="font-size:11px">GitHub Secrets에 <code>FINNHUB_API_KEY</code> 등록 후 Actions 실행</span>
-    </td></tr>`;
-  } else {
-    usTbody.innerHTML = US_TICKERS.map(s =>
-      `<tr id="us-row-${s.ticker}">
+  // 미국 종목 — Finnhub 우선, 없으면 Yahoo Finance
+  usTbody.innerHTML = US_TICKERS.map(s =>
+    `<tr id="us-row-${s.ticker}">
+      <td><span class="ticker ticker-btn" onclick="openChartModal('${s.ticker}')">${s.ticker}</span><br>
+          <span style="font-size:12px;color:var(--text2)">${s.name}</span></td>
+      <td colspan="5" style="color:var(--text3);font-size:12px;font-family:var(--mono)">
+        <div class="ai-loading"><div class="ai-spinner" style="width:12px;height:12px;border-width:2px"></div> 로딩 중...</div>
+      </td>
+    </tr>`
+  ).join('');
+
+  for (const s of US_TICKERS) {
+    // Finnhub 있으면 Finnhub, 없으면 Yahoo Finance
+    let data = null;
+    if (FINNHUB_KEY) {
+      data = await fetchFinnhubPrice(s.ticker);
+    }
+    if (!data) {
+      data = await fetchYahooPrice(s.ticker);
+    }
+    data = data || priceCache['US_'+s.ticker];
+
+    if (data) {
+      priceCache['US_'+s.ticker] = data;
+      const chg = data.chg ?? (data.price - data.prev);
+      const chgPct = data.chgPct ?? ((chg / data.prev) * 100);
+      const cls = chg >= 0 ? 'up' : 'down';
+      const high52 = data.high52 || STOCK_INFO[s.ticker]?.high52 || 0;
+      const isHigh = high52 && data.price >= high52 * 0.99;
+      const src = data.source === 'finnhub' ? 'Finnhub' : 'Yahoo';
+      const row = document.getElementById(`us-row-${s.ticker}`);
+      if (row) row.innerHTML = `
         <td><span class="ticker ticker-btn" onclick="openChartModal('${s.ticker}')">${s.ticker}</span><br>
             <span style="font-size:12px;color:var(--text2)">${s.name}</span></td>
-        <td colspan="5" style="color:var(--text3);font-size:12px;font-family:var(--mono)">
-          <div class="ai-loading"><div class="ai-spinner" style="width:12px;height:12px;border-width:2px"></div> 로딩 중...</div>
-        </td>
-      </tr>`
-    ).join('');
-
-    for (const s of US_TICKERS) {
-      const data = await fetchFinnhubPrice(s.ticker) || priceCache['US_'+s.ticker];
-      if (data) {
-        priceCache['US_'+s.ticker] = data;
-        const cls = data.chg >= 0 ? 'up' : 'down';
-        const high52 = STOCK_INFO[s.ticker]?.high52 || 0;
-        const isHigh = high52 && data.price >= high52 * 0.99;
-        const row = document.getElementById(`us-row-${s.ticker}`);
-        if (row) row.innerHTML = `
-          <td><span class="ticker ticker-btn" onclick="openChartModal('${s.ticker}')">${s.ticker}</span><br>
-              <span style="font-size:12px;color:var(--text2)">${s.name}</span></td>
-          <td style="font-family:var(--mono);font-weight:600;cursor:pointer" onclick="openChartModal('${s.ticker}')">$${data.price.toFixed(2)}</td>
-          <td><span class="change-badge ${cls}">${data.chg>=0?'+':''}$${Math.abs(data.chg).toFixed(2)}</span></td>
-          <td><span class="change-badge ${cls}">${data.chgPct>=0?'+':''}${data.chgPct.toFixed(2)}%</span></td>
-          <td style="font-family:var(--mono);font-size:12px">${high52?'$'+high52:'—'}</td>
-          <td>${isHigh?'<span class="change-badge new">★ 신고가 근접</span>':'<span style="font-size:11px;color:var(--text3)">—</span>'}</td>`;
-      }
-      await new Promise(r => setTimeout(r, 200));
+        <td style="font-family:var(--mono);font-weight:600;cursor:pointer" onclick="openChartModal('${s.ticker}')">$${data.price.toFixed(2)}</td>
+        <td><span class="change-badge ${cls}">${chg>=0?'+':''}$${Math.abs(chg).toFixed(2)}</span></td>
+        <td><span class="change-badge ${cls}">${chgPct>=0?'+':''}${chgPct.toFixed(2)}%</span></td>
+        <td style="font-family:var(--mono);font-size:12px">${high52?'$'+high52.toFixed(2):'—'}</td>
+        <td>${isHigh?'<span class="change-badge new">★ 신고가 근접</span>':'<span style="font-size:11px;color:var(--text3)">—</span>'}</td>`;
     }
+    await new Promise(r => setTimeout(r, 300));
   }
 
   document.getElementById('live-updated').textContent =
