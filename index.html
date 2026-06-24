@@ -685,6 +685,53 @@
     transition: opacity 0.15s;
   }
   .ticker-btn:hover { opacity: 0.75; }
+
+  /* ── 즐겨찾기 ── */
+  .fav-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 2px 4px;
+    transition: transform 0.2s;
+    line-height: 1;
+  }
+  .fav-btn:hover { transform: scale(1.2); }
+  .fav-btn.active { color: #f59e0b; }
+
+  /* 즐겨찾기 바 */
+  #fav-bar {
+    display: none;
+    padding: 8px 24px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+  }
+  #fav-bar.visible { display: flex; }
+  .fav-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(245,158,11,0.1);
+    border: 1px solid rgba(245,158,11,0.3);
+    border-radius: 20px;
+    padding: 4px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .fav-chip:hover { background: rgba(245,158,11,0.2); }
+  .fav-chip-remove {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text3);
+    font-size: 12px;
+    padding: 0;
+    line-height: 1;
+  }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@0.1.1/dist/chartjs-chart-financial.min.js"></script>
@@ -705,6 +752,13 @@
 </header>
 
 <!-- Nav Tabs -->
+
+<!-- 즐겨찾기 바 -->
+<div id="fav-bar">
+  <span style="font-size:11px;color:var(--text3);font-family:var(--mono);white-space:nowrap">⭐ 즐겨찾기:</span>
+  <div id="fav-chips" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+  <button onclick="clearFavorites()" style="font-size:11px;color:var(--text3);background:none;border:none;cursor:pointer;margin-left:auto;white-space:nowrap">전체 삭제</button>
+</div>
 <div class="nav-tabs" id="main-nav">
 
   <!-- 그룹 1: 공시·수급 -->
@@ -1446,11 +1500,15 @@
     <div class="ai-panel-content" id="ai-valuation-content"><div class="ai-loading"><div class="ai-spinner"></div> 분석 중...</div></div>
   </div>
 
-  <div class="filter-bar">
-    <button class="filter-btn active" onclick="filterValuation('all',this)">전체</button>
-    <button class="filter-btn" onclick="filterValuation('cheap',this)">저평가</button>
-    <button class="filter-btn" onclick="filterValuation('dividend',this)">고배당</button>
-    <button class="filter-btn" onclick="filterValuation('growth',this)">고성장</button>
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:4px">
+    <div class="filter-bar" style="margin:0">
+      <button class="filter-btn active" onclick="filterValuation('all',this)">전체</button>
+      <button class="filter-btn" onclick="filterValuation('cheap',this)">저평가</button>
+      <button class="filter-btn" onclick="filterValuation('dividend',this)">고배당</button>
+      <button class="filter-btn" onclick="filterValuation('growth',this)">고성장</button>
+      <button class="filter-btn" onclick="filterValuation('fav',this)" style="color:#f59e0b;border-color:rgba(245,158,11,0.4)">⭐ 즐겨찾기</button>
+    </div>
+    <span style="font-size:11px;color:var(--text3)">★ 클릭하면 즐겨찾기 추가</span>
   </div>
 
   <!-- PER·PBR 히트맵 -->
@@ -1469,7 +1527,7 @@
 
   <div class="table-wrap">
     <table>
-      <thead><tr><th>종목</th><th>현재가</th><th>PER</th><th>PBR</th><th>ROE</th><th>배당수익률</th><th>배당기준일</th><th>밸류 신호</th></tr></thead>
+      <thead><tr><th>⭐</th><th>종목</th><th>현재가</th><th>PER</th><th>PBR</th><th>ROE</th><th>배당수익률</th><th>배당기준일</th><th>밸류 신호</th></tr></thead>
       <tbody id="valuation-tbody"></tbody>
     </table>
   </div>
@@ -3147,27 +3205,58 @@ function renderValuation(data) {
   });
 
   const vt = document.getElementById('valuation-tbody');
-  if(vt) vt.innerHTML = data.map(d=>{
-    const cheap = d.per<10 && d.pbr<1;
-    const hiDiv = d.div>=5;
-    return `<tr>
-      <td><span class="ticker ticker-btn" onclick="openChartModal('${d.ticker}')">${d.ticker}</span><br><span style="font-size:12px;color:var(--text2)">${d.name}</span></td>
-      <td style="font-family:var(--mono);font-weight:600;cursor:pointer" onclick="openChartModal('${d.ticker}')">${d.price.toLocaleString()}원</td>
-      <td style="font-family:var(--mono);color:${d.per<15?'var(--green)':d.per>25?'var(--red)':'var(--text2)'}">${d.per}x</td>
-      <td style="font-family:var(--mono);color:${d.pbr<1?'var(--green)':'var(--text2)'}">${d.pbr}x</td>
-      <td style="font-family:var(--mono);color:${d.roe>10?'var(--green)':'var(--text2)'}">${d.roe}%</td>
-      <td style="font-family:var(--mono);color:${d.div>=5?'var(--green)':d.div>=3?'var(--accent)':'var(--text3)'};font-weight:${d.div>=5?700:400}">${d.div}%</td>
-      <td style="font-size:11px;color:var(--text3);font-family:var(--mono)">${d.divDate}</td>
-      <td>${cheap?'<span class="change-badge new">★ 저PER+저PBR</span>':hiDiv?'<span class="change-badge up">★ 고배당</span>':''}</td>
-    </tr>`;}).join('');
+  if(vt) {
+    vt.innerHTML = data.map(d=>{
+      const cheap = d.per<10 && d.pbr<1;
+      const hiDiv = d.div>=5;
+      const isFav = favorites.includes(d.ticker);
+      // 실시간 가격 캐시에서 가져오기
+      const cached = priceCache[d.ticker];
+      const livePrice = cached ? cached.price : d.price;
+      const chg = cached ? (cached.price - cached.prev) : 0;
+      const chgPct = cached ? cached.chgPct : 0;
+      const cls = chg >= 0 ? 'up' : 'down';
+      const priceStr = cached
+        ? `${livePrice.toLocaleString()}원 <span class="change-badge ${cls}" style="font-size:10px">${chg>=0?'+':''}${chgPct?.toFixed(2)||'0'}%</span>`
+        : `${livePrice.toLocaleString()}원 <span style="font-size:10px;color:var(--text3)">(로딩 전)</span>`;
+      return `<tr style="${isFav?'background:rgba(245,158,11,0.04);border-left:3px solid #f59e0b':''}">
+        <td>
+          <button class="fav-btn ${isFav?'active':''}" onclick="toggleFavorite('${d.ticker}','${d.name}',event)" title="즐겨찾기">${isFav?'⭐':'☆'}</button>
+          <span class="ticker ticker-btn" onclick="openChartModal('${d.ticker}')">${d.ticker}</span><br>
+          <span style="font-size:12px;color:var(--text2)">${d.name}</span>
+        </td>
+        <td style="font-family:var(--mono);font-weight:600;cursor:pointer" onclick="openChartModal('${d.ticker}')" id="val-price-${d.ticker}">${priceStr}</td>
+        <td style="font-family:var(--mono);color:${d.per<15?'var(--green)':d.per>25?'var(--red)':'var(--text2)'}">${d.per}x</td>
+        <td style="font-family:var(--mono);color:${d.pbr<1?'var(--green)':'var(--text2)'}">${d.pbr}x</td>
+        <td style="font-family:var(--mono);color:${d.roe>10?'var(--green)':'var(--text2)'}">${d.roe}%</td>
+        <td style="font-family:var(--mono);color:${d.div>=5?'var(--green)':d.div>=3?'var(--accent)':'var(--text3)'};font-weight:${d.div>=5?700:400}">${d.div}%</td>
+        <td style="font-size:11px;color:var(--text3);font-family:var(--mono)">${d.divDate}</td>
+        <td>${cheap?'<span class="change-badge new">★ 저PER+저PBR</span>':hiDiv?'<span class="change-badge up">★ 고배당</span>':''}</td>
+      </tr>`;
+    }).join('');
+    // 실시간 가격 업데이트 (백그라운드)
+    updateValuationPrices(data);
+  }
 }
 
-function filterValuation(type,btn) {
-  valFilter=type;
-  document.querySelectorAll('#tab-valuation .filter-bar .filter-btn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  renderValuation(type==='all'?VALUATION_DATA:VALUATION_DATA.filter(d=>d.tag===type));
+async function updateValuationPrices(data) {
+  for(const d of data) {
+    if(priceCache[d.ticker]) continue; // 이미 있으면 스킵
+    const res = await fetchYahooPrice(d.ticker);
+    if(res) {
+      priceCache[d.ticker] = res;
+      const el = document.getElementById(`val-price-${d.ticker}`);
+      if(el) {
+        const chg = res.price - res.prev;
+        const cls = chg >= 0 ? 'up' : 'down';
+        el.innerHTML = `${res.price.toLocaleString()}원 <span class="change-badge ${cls}" style="font-size:10px">${chg>=0?'+':''}${res.chgPct?.toFixed(2)||'0'}%</span>`;
+      }
+    }
+    await new Promise(r => setTimeout(r, 400));
+  }
 }
+
+// filterValuation — 위 통합 버전 사용
 
 // ═══════════════════════════════════════════
 // 매크로 데이터 & 함수
@@ -3315,7 +3404,8 @@ function addWatchStock() {
     try{localStorage.setItem('watchStocks',JSON.stringify(watchStocks));}catch(e){}
   }
   document.getElementById('watch-ticker').value='';
-  renderWatchList(); renderScores();
+  renderWatchList();
+renderFavBar(); renderScores();
 }
 
 function removeWatch(ticker) {
@@ -4464,6 +4554,78 @@ function switchTab(name, btnEl) {
     if(el) el.style.display = 'block';
   }
 }
+
+// ═══════════════════════════════════════════
+// 즐겨찾기 시스템
+// ═══════════════════════════════════════════
+let favorites = [];
+try { favorites = JSON.parse(localStorage.getItem('wt_favorites') || '[]'); } catch(e) {}
+
+let favNames = {};
+try { favNames = JSON.parse(localStorage.getItem('wt_fav_names') || '{}'); } catch(e) {}
+
+function toggleFavorite(ticker, name, e) {
+  if(e) e.stopPropagation();
+  const idx = favorites.indexOf(ticker);
+  if(idx === -1) {
+    favorites.push(ticker);
+    favNames[ticker] = name;
+  } else {
+    favorites.splice(idx, 1);
+    delete favNames[ticker];
+  }
+  try {
+    localStorage.setItem('wt_favorites', JSON.stringify(favorites));
+    localStorage.setItem('wt_fav_names', JSON.stringify(favNames));
+  } catch(e) {}
+  renderFavBar();
+  // 현재 탭 새로고침
+  const activePanel = document.querySelector('.tab-panel.active');
+  if(activePanel?.id === 'tab-valuation') renderValuation(VALUATION_DATA);
+  if(activePanel?.id === 'tab-score') renderScores();
+}
+
+function renderFavBar() {
+  const bar = document.getElementById('fav-bar');
+  const chips = document.getElementById('fav-chips');
+  if(!bar || !chips) return;
+
+  if(favorites.length === 0) {
+    bar.classList.remove('visible');
+    return;
+  }
+  bar.classList.add('visible');
+  chips.innerHTML = favorites.map(t => `
+    <div class="fav-chip" onclick="openChartModal('${t}')">
+      <span style="font-family:var(--mono);font-size:11px;color:var(--accent)">${t}</span>
+      <span style="font-size:12px;color:var(--text2)">${favNames[t]||t}</span>
+      <button class="fav-chip-remove" onclick="toggleFavorite('${t}','',event)" title="제거">✕</button>
+    </div>`).join('');
+}
+
+function clearFavorites() {
+  favorites = []; favNames = {};
+  try {
+    localStorage.removeItem('wt_favorites');
+    localStorage.removeItem('wt_fav_names');
+  } catch(e) {}
+  renderFavBar();
+  const activePanel = document.querySelector('.tab-panel.active');
+  if(activePanel?.id === 'tab-valuation') renderValuation(VALUATION_DATA);
+  if(activePanel?.id === 'tab-score') renderScores();
+}
+
+function filterValuation(type, btn) {
+  valFilter = type;
+  document.querySelectorAll('#tab-valuation .filter-bar .filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  if(type === 'fav') {
+    renderValuation(VALUATION_DATA.filter(d => favorites.includes(d.ticker)));
+  } else {
+    renderValuation(type==='all' ? VALUATION_DATA : VALUATION_DATA.filter(d=>d.tag===type));
+  }
+}
+
 // ═══════════════════════════════════════════
 // 초기 렌더링
 // ═══════════════════════════════════════════
