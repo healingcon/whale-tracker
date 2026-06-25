@@ -2764,7 +2764,7 @@ async function fetchYahooPrice(ticker) {
   ];
   for (const url of proxies) {
     try {
-      const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
+      const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
       const d = await res.json();
       const meta = d?.chart?.result?.[0]?.meta;
       if (!meta?.regularMarketPrice) continue;
@@ -3007,7 +3007,7 @@ async function loadRealNews() {
 
     for(const url of proxies) {
       try {
-        const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
+        const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
         const text = await res.text();
         const parser = new DOMParser();
         const xml = parser.parseFromString(text, 'text/xml');
@@ -4940,15 +4940,16 @@ const ALL_TRACKED = [
 async function fetchYahooQuote(ticker) {
   const isKR = /^\d+$/.test(ticker);
   const symbol = isKR ? ticker + '.KS' : ticker;
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?range=1d&interval=1d`;
+  // v7 quote API (배치용) 단일 종목도 사용
+  const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(symbol)}&fields=regularMarketPrice,regularMarketPreviousClose,regularMarketChangePercent,regularMarketOpen,regularMarketDayHigh,regularMarketDayLow,regularMarketVolume,fiftyTwoWeekHigh,marketCap,longName`;
+  const urlChart = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?range=1d&interval=1d`;
   const proxies = [
     `https://corsproxy.io/?${encodeURIComponent(url)}`,
-    `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-    `https://thingproxy.freeboard.io/fetch/${url}`,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(urlChart)}`,
   ];
   for(const p of proxies) {
     try {
-      const res = await fetch(p, {signal: AbortSignal.timeout(6000)});
+      const res = await fetch(p, {signal: AbortSignal.timeout(5000)});
       const d = await res.json();
       const meta = d?.chart?.result?.[0]?.meta;
       if(!meta?.regularMarketPrice) continue;
@@ -4994,8 +4995,24 @@ async function loadAllPrices() {
   if(globalDataLoaded) return;
   globalDataLoaded = true;
 
-  // 환율 먼저
-  const fx = await fetchForexRates();
+  // ── 1. 병렬로 한 번에 다 요청 ──
+  const toLoad = ALL_TRACKED.filter(s => !priceCache[s.ticker]);
+
+  // 환율 + BTC + 전체 종목 동시 시작
+  const [fx] = await Promise.all([
+    fetchForexRates(),
+    // BTC
+    fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT')
+      .then(r=>r.json()).then(d=>{
+        const p = parseFloat(d.lastPrice), chg = parseFloat(d.priceChangePercent);
+        const el = document.getElementById('live-btc');
+        if(el) el.textContent = '$' + Math.round(p).toLocaleString();
+        const chgEl = document.getElementById('live-btc-chg');
+        if(chgEl) { chgEl.textContent = (chg>=0?'+':'')+chg.toFixed(2)+'%'; chgEl.style.color=chg>=0?'var(--green)':'var(--red)'; }
+      }).catch(()=>{}),
+  ]);
+
+  // 환율 업데이트
   if(fx) {
     const usdEl = document.getElementById('fx-usd');
     const jpyEl = document.getElementById('fx-jpy');
@@ -5003,54 +5020,101 @@ async function loadAllPrices() {
     if(jpyEl) { jpyEl.textContent = fx.jpyKrw.toFixed(2); document.getElementById('fx-jpy-chg').textContent = 'JPY/KRW'; }
   }
 
-  // BTC
-  fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT')
-    .then(r=>r.json()).then(d=>{
-      const p = parseFloat(d.lastPrice), chg = parseFloat(d.priceChangePercent);
-      const el = document.getElementById('live-btc');
-      if(el) el.textContent = '$' + Math.round(p).toLocaleString();
-      const chgEl = document.getElementById('live-btc-chg');
-      if(chgEl) { chgEl.textContent = (chg>=0?'+':'')+chg.toFixed(2)+'%'; chgEl.style.color=chg>=0?'var(--green)':'var(--red)'; }
-    }).catch(()=>{});
-
-  // 전체 종목 순차 로드 (서버 부하 방지)
-  for(const stock of ALL_TRACKED) {
-    if(priceCache[stock.ticker]) continue;
-    const data = await fetchYahooQuote(stock.ticker);
-    if(data) {
-      priceCache[stock.ticker] = {...data, isKR: /^\d+$/.test(stock.ticker)};
-      // STOCK_INFO 동기화
-      if(!STOCK_INFO[stock.ticker]) STOCK_INFO[stock.ticker] = {};
-      Object.assign(STOCK_INFO[stock.ticker], {
-        name:   data.name || stock.name,
-        price:  data.price,
-        chg:    data.chg,
-        chgPct: data.chgPct,
-        open:   data.open,
-        high:   data.high,
-        low:    data.low,
-        high52: data.high52,
-        vol:    data.vol >= 10000 ? Math.round(data.vol/10000)+'만주' : data.vol.toLocaleString()+'주',
-        cap:    data.cap >= 1e12 ? (data.cap/1e12).toFixed(1)+'조' : data.cap >= 1e8 ? Math.round(data.cap/1e8)+'억' : '—',
-      });
-      // 화면 즉시 갱신
-      refreshPriceElements(stock.ticker);
-      // SIGNAL_STOCKS 가격 업데이트
-      const ss = SIGNAL_STOCKS.find(s=>s.ticker===stock.ticker);
-      if(ss) { ss.prev = ss.price; ss.price = data.price; }
-      // VALUATION_DATA 가격 업데이트
-      const vd = VALUATION_DATA.find(v=>v.ticker===stock.ticker);
-      if(vd) vd.price = data.price;
+  // ── 2. Yahoo Finance 배치 요청 (5개씩 병렬) ──
+  // Yahoo Finance에 한 번에 여러 심볼 요청 (쿼리 스트링 방식)
+  async function fetchBatch(stocks) {
+    const symbols = stocks.map(s => /^\d+$/.test(s.ticker) ? s.ticker+'.KS' : s.ticker).join(',');
+    const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(symbols)}&fields=regularMarketPrice,regularMarketPreviousClose,regularMarketChangePercent,regularMarketOpen,regularMarketDayHigh,regularMarketDayLow,regularMarketVolume,fiftyTwoWeekHigh,marketCap,longName,shortName`;
+    const proxies = [
+      `https://corsproxy.io/?${encodeURIComponent(url)}`,
+      `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+    ];
+    for(const proxy of proxies) {
+      try {
+        const res = await fetch(proxy, { signal: AbortSignal.timeout(8000) });
+        const d = await res.json();
+        const quotes = d?.quoteResponse?.result || [];
+        if(!quotes.length) continue;
+        quotes.forEach((q, i) => {
+          const stock = stocks[i];
+          if(!stock || !q.regularMarketPrice) return;
+          const isKR = /^\d+$/.test(stock.ticker);
+          const data = {
+            price:   q.regularMarketPrice,
+            prev:    q.regularMarketPreviousClose || q.regularMarketPrice,
+            chg:     q.regularMarketPrice - (q.regularMarketPreviousClose||q.regularMarketPrice),
+            chgPct:  q.regularMarketChangePercent || 0,
+            open:    q.regularMarketOpen   || q.regularMarketPrice,
+            high:    q.regularMarketDayHigh|| q.regularMarketPrice,
+            low:     q.regularMarketDayLow || q.regularMarketPrice,
+            high52:  q.fiftyTwoWeekHigh    || 0,
+            vol:     q.regularMarketVolume || 0,
+            cap:     q.marketCap           || 0,
+            name:    q.longName || q.shortName || stock.name,
+            isKR, source: 'yahoo_batch',
+          };
+          priceCache[stock.ticker] = data;
+          if(!STOCK_INFO[stock.ticker]) STOCK_INFO[stock.ticker] = {};
+          Object.assign(STOCK_INFO[stock.ticker], {
+            name:  data.name,
+            price: data.price, chg: data.chg, chgPct: data.chgPct,
+            open:  data.open,  high: data.high, low: data.low,
+            high52:data.high52,
+            vol:   data.vol>=10000 ? Math.round(data.vol/10000)+'만주' : data.vol.toLocaleString()+'주',
+            cap:   data.cap>=1e12 ? (data.cap/1e12).toFixed(1)+'조' : data.cap>=1e8 ? Math.round(data.cap/1e8)+'억' : '—',
+          });
+          refreshPriceElements(stock.ticker);
+          const ss = SIGNAL_STOCKS.find(s=>s.ticker===stock.ticker);
+          if(ss) { ss.prev=ss.price; ss.price=data.price; }
+          const vd = VALUATION_DATA.find(v=>v.ticker===stock.ticker);
+          if(vd) vd.price = data.price;
+        });
+        return true; // 성공
+      } catch(e) { continue; }
     }
-    await new Promise(r=>setTimeout(r, 350));
+    return false; // 배치 실패 → 개별 fallback
   }
 
-  console.log('✅ 전체 종목 실시간 가격 로드 완료');
-  // 업데이트 시각 표시
+  // ── 3. 배치 사이즈 10개씩 병렬 처리 ──
+  const BATCH_SIZE = 10;
+  const batches = [];
+  for(let i=0; i<toLoad.length; i+=BATCH_SIZE) {
+    batches.push(toLoad.slice(i, i+BATCH_SIZE));
+  }
+
+  // 배치 병렬 실행
+  const batchResults = await Promise.all(batches.map(batch => fetchBatch(batch)));
+
+  // 배치 실패한 종목은 개별 요청 fallback
+  const failed = [];
+  batches.forEach((batch, i) => {
+    if(!batchResults[i]) failed.push(...batch);
+  });
+
+  // 실패 종목 개별 요청 (병렬 5개씩)
+  if(failed.length > 0) {
+    const PARALLEL = 5;
+    for(let i=0; i<failed.length; i+=PARALLEL) {
+      const group = failed.slice(i, i+PARALLEL);
+      await Promise.all(group.map(async stock => {
+        if(priceCache[stock.ticker]) return;
+        const data = await fetchYahooQuote(stock.ticker);
+        if(data) {
+          priceCache[stock.ticker] = {...data, isKR: /^\d+$/.test(stock.ticker)};
+          if(!STOCK_INFO[stock.ticker]) STOCK_INFO[stock.ticker] = {};
+          Object.assign(STOCK_INFO[stock.ticker], { name:data.name||stock.name, price:data.price, chg:data.chg, chgPct:data.chgPct, open:data.open, high:data.high, low:data.low, high52:data.high52, vol:data.vol>=10000?Math.round(data.vol/10000)+'만주':data.vol.toLocaleString()+'주', cap:data.cap>=1e12?(data.cap/1e12).toFixed(1)+'조':data.cap>=1e8?Math.round(data.cap/1e8)+'억':'—' });
+          refreshPriceElements(stock.ticker);
+        }
+      }));
+      if(i+PARALLEL < failed.length) await new Promise(r=>setTimeout(r,200));
+    }
+  }
+
   const now = new Date();
   const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`;
+  console.log(`✅ 전체 종목 가격 로드 완료 (${timeStr})`);
   document.querySelectorAll('[id="live-updated"]').forEach(el=>
-    el.textContent = `실시간 가격 업데이트: ${timeStr} (Yahoo Finance)`
+    el.textContent = `업데이트: ${timeStr} (Yahoo Finance)`
   );
 }
 
